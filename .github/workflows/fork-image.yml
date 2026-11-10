@@ -33,11 +33,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # GHCR 要求镜像名全小写；GitHub 用户名 Hickathon 含大写，
-      # 直接拼 github.repository 会被 registry 拒绝。
+      # GHCR 要求镜像名全小写；仓库名是 imgHK，直接拼会被 registry 拒绝。
       - name: Resolve lowercase image name
         id: image
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/imgli" >> "$GITHUB_OUTPUT"
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - id: meta
         uses: docker/metadata-action@v5

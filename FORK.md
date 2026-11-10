@@ -4,6 +4,9 @@ This repository is a **modified fork** of
 [imgli](https://github.com/yixian-huang/imgli), used to self-host
 <https://img.hks.hk>. / 本仓库是 imgli 的修改版分支。
 
+- Fork: <https://github.com/haikesong/imgHK>
+- Upstream: <https://github.com/yixian-huang/imgli>
+
 ## License
 
 AGPL-3.0-only. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
@@ -38,7 +41,7 @@ Keep this table up to date. One row per user-visible change.
 docker build -t imgli-fork:local .
 ```
 
-The `fork-image` workflow also publishes `ghcr.io/hickathon/imgli:<tag>`.
+The `fork-image` workflow also publishes `ghcr.io/haikesong/imghk:<tag>`.
 
 ## Deploy / 部署
 

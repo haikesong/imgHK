@@ -121,6 +121,28 @@ func TestAuthErrorCodes(t *testing.T) {
 	}
 }
 
+func TestLoginThrottleReturns429(t *testing.T) {
+	s := newTestServer(t)
+	doJSON(t, s, "POST", "/api/v1/auth/register",
+		`{"username":"alice","email":"alice@example.test","password":"passw0rd"}`, nil)
+
+	for i := 0; i < 4; i++ {
+		rec, e := doJSON(t, s, "POST", "/api/v1/auth/login",
+			`{"account":"alice","password":"wrong-pw"}`, nil)
+		if rec.Code != http.StatusUnauthorized || code(t, e) != "invalid_credentials" {
+			t.Fatalf("第 %d 次失败应 401 invalid_credentials, got %d %s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+	rec, e := doJSON(t, s, "POST", "/api/v1/auth/login",
+		`{"account":"alice","password":"wrong-pw"}`, nil)
+	if rec.Code != http.StatusTooManyRequests || code(t, e) != "rate_limited" {
+		t.Fatalf("达到阈值应 429 rate_limited, got %d %s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Error("429 应带 Retry-After")
+	}
+}
+
 func TestRegistrationClosed(t *testing.T) {
 	s := newTestServer(t)
 	settings.New(s.opts.DB).Set(model.SettingRegistrationMode, "closed")

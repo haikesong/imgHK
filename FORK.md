@@ -34,6 +34,7 @@ Keep this table up to date. One row per user-visible change.
 | Date | Commit | Change |
 |---|---|---|
 | 2026-11-10 | [`e0f7f17`](https://github.com/haikesong/imgHK/commit/e0f7f171f5c4e78c5e1ce96a2c239414957590c2) | 登录/注册与邮件流页脚移除上游产品署名，改为站点名 + AGPL 源码链接（`source_url`）。 |
+| 2026-11-10 | [`93946c6`](https://github.com/haikesong/imgHK/commit/93946c6) | 登录失败按账号/IP 双维度退避锁定（账号 5 次/15 分钟、IP 30 次/10 分钟），429 带 `Retry-After`；未知账号同样计数，避免枚举。 |
 
 ## Build / 构建
 

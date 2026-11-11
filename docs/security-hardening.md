@@ -67,6 +67,41 @@ bucket/CDN layer.
 - [ ] Presign TTL left short (app default is brief; do not cache signed URLs)
 - [ ] Backups of DB + objects both access-controlled
 
+## Login brute-force protection
+
+The app applies a DB-backed failure throttle in addition to the per-minute
+HTTP limiter. It is intentionally temporary and resets on success:
+
+| Dimension | Failures before lock | Lock window | Escalation | Max lock |
+|-----------|----------------------|-------------|------------|----------|
+| Account | 5 in 15 minutes | 1 minute | doubles per further failure | 15 minutes |
+| Client IP | 30 in 10 minutes | 5 minutes | doubles per further failure | 30 minutes |
+
+- Existing users are counted by `user_id`, so alternating between username and
+  email cannot bypass the account limit. Unknown identifiers are counted under a
+  SHA-256 hash of the submitted value, so the `429` response does not reveal
+  whether an account exists.
+- The `login_throttles` table stores only SHA-256 keys (no plaintext account or
+  IP). Rows older than 7 days are swept at most once per hour.
+- A throttled login returns HTTP `429`, `code: "rate_limited"` and a
+  `Retry-After` header in seconds. A successful login clears the account and IP
+  counters; there is no permanent lock.
+- The in-process mutex assumes one application instance. If you run multiple
+  replicas, replace the read-modify-write with a DB-atomic upsert or a shared
+  store.
+
+### Edge layer
+
+Application throttling does not replace a WAF. In Cloudflare, add a rate
+limiting rule for `POST /api/v1/auth/login` (and registration / password reset
+paths) with **Managed Challenge** as the action, keep `/api/*` out of cache,
+and restrict the origin to Cloudflare's IP ranges where possible. Those rules
+live in the Cloudflare dashboard, not in this repository.
+
+The app does not embed a CAPTCHA widget. If you add Turnstile or another
+challenge, verify the token on the server; a frontend-only widget is not a
+security control.
+
 ## Reverse proxy
 
 - Terminate TLS at the proxy; set `IMGLI_TRUST_PROXY=true` **only** when the

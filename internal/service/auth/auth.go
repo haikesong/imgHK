@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -34,6 +35,7 @@ var (
 	ErrEmailTaken         = errors.New("auth: 邮箱已被注册")
 	ErrUsernameTaken      = errors.New("auth: 用户名已被占用")
 	ErrInvalidCredentials = errors.New("auth: 账号或密码错误")
+	ErrLoginThrottled     = errors.New("auth: 登录尝试过于频繁")
 	ErrRegistrationClosed = errors.New("auth: 注册未开放")
 	ErrInviteRequired     = errors.New("auth: 邀请模式需提供邀请码")
 	ErrInviteInvalid      = errors.New("auth: 邀请码无效或已被使用")
@@ -72,10 +74,15 @@ type Service struct {
 	st      *settings.Service
 	Mailer  Mailer // 可选;server 组装注入
 	BaseURL string // 外链基础地址,如 https://img.li
+
+	// 登录失败节流：状态落 DB，进程内用一把锁串行化读改写（当前单实例部署）。
+	throttleMu        sync.Mutex
+	lastThrottleSweep time.Time
+	now               func() time.Time // 测试可替换
 }
 
 func New(db *gorm.DB, st *settings.Service) *Service {
-	return &Service{db: db, st: st}
+	return &Service{db: db, st: st, now: time.Now}
 }
 
 // Register 创建用户（无归因）。等价于 RegisterWithMeta(..., SignupMeta{})。
@@ -190,24 +197,52 @@ func (s *Service) RegisterWithMeta(username, email, password, inviteCode string,
 }
 
 // Login 校验凭据并创建 session，返回明文 token（仅此一次）。
+// 失败按账号与 IP 双维度计数；达到阈值后返回 ErrLoginThrottled（带 RetryAfter），
+// 成功则清空计数。它和 handler 的每分钟限流互为补充：这里挡的是持续猜密码，
+// 不是单纯的请求速率。
 func (s *Service) Login(account, password, ip, ua string) (string, *model.User, error) {
 	account = strings.TrimSpace(account)
+	now := s.now()
+	ipKey := loginIPThrottleKey(ip)
+	if retry, locked := s.lockedThrottleRetry([]string{ipKey}, now); locked {
+		return "", nil, &LoginThrottledError{RetryAfter: retry}
+	}
+
 	var u model.User
 	err := s.db.Where("email = ? OR username = ?", strings.ToLower(account), account).First(&u).Error
+	inputKey := loginAccountKey(account)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if retry, locked := s.lockedThrottleRetry([]string{inputKey}, now); locked {
+			return "", nil, &LoginThrottledError{RetryAfter: retry}
+		}
 		// 与密码错误同码，不泄露用户是否存在；等时防枚举
 		VerifyPassword(dummyHash, password)
+		if retry := s.recordLoginFailure(inputKey, ipKey, now); retry > 0 {
+			return "", nil, &LoginThrottledError{RetryAfter: retry}
+		}
 		return "", nil, ErrInvalidCredentials
 	}
 	if err != nil {
 		return "", nil, err
 	}
+
+	// 用户名和邮箱统一按 user ID 计数，避免切换登录标识绕过账号级限制。
+	accountKey := loginAccountIDKey(u.ID)
+	if retry, locked := s.lockedThrottleRetry([]string{accountKey}, now); locked {
+		return "", nil, &LoginThrottledError{RetryAfter: retry}
+	}
 	if !VerifyPassword(u.PasswordHash, password) {
+		if retry := s.recordLoginFailure(accountKey, ipKey, now); retry > 0 {
+			return "", nil, &LoginThrottledError{RetryAfter: retry}
+		}
 		return "", nil, ErrInvalidCredentials
 	}
 	if u.Status == "banned" {
 		return "", nil, ErrUserBanned
 	}
+
+	// 成功即清空账号和 IP 计数；inputKey 用于清理切换登录标识留下的旧行。
+	s.clearLoginThrottle(accountKey, inputKey, ipKey)
 	raw, err := s.CreateSession(&u, ip, ua)
 	if err != nil {
 		return "", nil, err
@@ -541,7 +576,6 @@ func (s *Service) ConfirmChangeEmail(rawToken string) error {
 	})
 }
 
-
 // sendWelcomeEmail 注册后可选欢迎信：welcome_email=false 或 Mailer 空时跳过；SMTP 未配仅 warn 吞掉。
 func (s *Service) sendWelcomeEmail(u *model.User) {
 	if s.Mailer == nil || u == nil || strings.TrimSpace(u.Email) == "" {
@@ -562,7 +596,6 @@ func (s *Service) sendWelcomeEmail(u *model.User) {
 		}
 	}()
 }
-
 
 // sendVerifyEmail 同步建 24h 验证令牌、异步发送(失败仅日志)。Mailer 为空整体跳过。
 func (s *Service) sendVerifyEmail(u *model.User) {
@@ -734,9 +767,9 @@ func (s *Service) QuotaInfo(userID uint64) (*QuotaInfo, error) {
 	return &QuotaInfo{
 		Used: u.UsedStorage, Total: g.StorageQuota,
 		MaxFileSize: g.MaxFileSize, AllowedExts: g.AllowedExts,
-		BandwidthUsed:   bandwidth.EffectiveUsed(&u, period),
-		BandwidthQuota:  g.BandwidthQuotaMonth,
-		BandwidthPeriod: period,
+		BandwidthUsed:    bandwidth.EffectiveUsed(&u, period),
+		BandwidthQuota:   g.BandwidthQuotaMonth,
+		BandwidthPeriod:  period,
 		DefaultExpiresIn: g.DefaultExpiresIn, MaxExpiresIn: g.MaxExpiresIn,
 		DefaultMaxViews: g.DefaultMaxViews, MaxMaxViews: g.MaxMaxViews,
 		RetentionDays: g.RetentionDays, ForceMaxAgeDays: g.ForceMaxAgeDays,

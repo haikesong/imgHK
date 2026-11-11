@@ -1,12 +1,14 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -24,8 +26,70 @@ func init() {
 }
 
 // noBuildHTML：dist 未构建（无 index.html）时的提示页。
-const noBuildHTML = `<!doctype html><meta charset="utf-8"><title>img.li</title>
+const noBuildHTML = `<!doctype html><meta charset="utf-8"><title>图床</title>
 <p style="font-family:system-ui;margin:40px">前端未构建：请运行 <code>make web</code> 后重启；开发请在 web/ 下 <code>npm run dev</code>（代理到 :8686）。</p>`
+
+var (
+	reHTMLTitle    = regexp.MustCompile(`(?is)<title>.*?</title>`)
+	reOGTitle      = regexp.MustCompile(`(?is)(<meta\s+property="og:title"\s+content=")[^"]*(")`)
+	reAppleAppName = regexp.MustCompile(`(?is)(<meta\s+name="apple-mobile-web-app-title"\s+content=")[^"]*(")`)
+	reJSONName     = regexp.MustCompile(`"name"\s*:\s*"[^"]*"`)
+	reJSONShort    = regexp.MustCompile(`"short_name"\s*:\s*"[^"]*"`)
+)
+
+// siteName 返回后台配置的站点名；未配置/未播种时返回空串。
+func (s *Server) siteName() string {
+	if s.opts.DB == nil {
+		return ""
+	}
+	var name string
+	if err := settings.New(s.opts.DB).Get(model.SettingSiteName, &name); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(name)
+}
+
+// injectSiteName 用后台配置的站点名覆写首屏 HTML 的标题类字段。
+// 前端要等 /config 返回后才更新 document.title，服务端先写好可避免
+// 打开页面时先闪出内置默认名再变成站点名。
+func (s *Server) injectSiteName(doc []byte) []byte {
+	name := s.siteName()
+	if name == "" {
+		return doc
+	}
+	esc := html.EscapeString(name)
+	out := string(doc)
+	out = reHTMLTitle.ReplaceAllStringFunc(out, func(string) string { return "<title>" + esc + "</title>" })
+	out = replaceAttr(out, reOGTitle, esc)
+	out = replaceAttr(out, reAppleAppName, esc)
+	return []byte(out)
+}
+
+func replaceAttr(doc string, re *regexp.Regexp, value string) string {
+	return re.ReplaceAllStringFunc(doc, func(m string) string {
+		sub := re.FindStringSubmatch(m)
+		if len(sub) < 3 {
+			return m
+		}
+		return sub[1] + value + sub[2]
+	})
+}
+
+// injectManifestName 同步 PWA 清单里的站名（静态文件按站点配置动态出）。
+func (s *Server) injectManifestName(b []byte) []byte {
+	name := s.siteName()
+	if name == "" {
+		return b
+	}
+	q, err := json.Marshal(name)
+	if err != nil {
+		return b
+	}
+	v := string(q)
+	out := reJSONName.ReplaceAllStringFunc(string(b), func(string) string { return `"name": ` + v })
+	out = reJSONShort.ReplaceAllStringFunc(out, func(string) string { return `"short_name": ` + v })
+	return []byte(out)
+}
 
 // mountWeb 挂载 SPA：/assets/* 走 immutable 静态服务；其余 GET/HEAD 未匹配
 // 且不属 API/直链/带扩展名的路径回落 index.html。API 路径 404 信封不变
@@ -51,6 +115,7 @@ func (s *Server) mountWeb(dist fs.FS) {
 		if err != nil {
 			b = []byte(noBuildHTML)
 		}
+		b = s.injectSiteName(b)
 		if inj := s.ogInject(r); inj != "" {
 			b = injectHead(b, inj)
 		}
@@ -80,6 +145,14 @@ func (s *Server) mountWeb(dist fs.FS) {
 				if st.IsDir() {
 					jsonNotFound(w, r)
 					return
+				}
+				if name == "manifest.webmanifest" {
+					if b, err := fs.ReadFile(dist, name); err == nil {
+						w.Header().Set("Content-Type", "application/manifest+json")
+						w.Header().Set("Cache-Control", "no-cache")
+						_, _ = w.Write(s.injectManifestName(b))
+						return
+					}
 				}
 				http.ServeFileFS(w, r, dist, name)
 				return
@@ -194,21 +267,15 @@ func (s *Server) ogInject(r *http.Request) string {
 	}
 }
 
-// ogSiteLabel prefers configured site_name; falls back to product brand img.li.
+// ogSiteLabel prefers configured site_name; falls back to the base URL or a neutral label.
 func (s *Server) ogSiteLabel() string {
-	if s.opts.DB != nil {
-		var name string
-		if err := settings.New(s.opts.DB).Get(model.SettingSiteName, &name); err == nil {
-			name = strings.TrimSpace(name)
-			if name != "" {
-				return name
-			}
-		}
+	if name := s.siteName(); name != "" {
+		return name
 	}
 	if s.opts.Cfg != nil {
 		if h := strings.TrimSpace(s.opts.Cfg.BaseURL); h != "" {
 			return strings.TrimRight(h, "/")
 		}
 	}
-	return "img.li"
+	return "图床"
 }

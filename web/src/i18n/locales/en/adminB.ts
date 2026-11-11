@@ -304,7 +304,7 @@ export default {
   webpSkipIfLargerHint: 'On by default. If WebP is not smaller than the fallback (processed jpeg/png, or original bytes), keep that format.',
   enableTextWatermark: 'Enable text watermark',
   textWatermark: 'Text watermark',
-  textWatermarkPlaceholder: 'e.g. Imgli · img.li',
+  textWatermarkPlaceholder: 'e.g. Site name · image',
   textWatermarkHint:
     'Embedded font covers common CJK (GB2312 level-1) plus Latin/punctuation; unsupported characters are rejected on save (they would render as tofu boxes).',
   watermarkPos: 'Watermark position',
@@ -335,7 +335,7 @@ export default {
   announcementSchedule: 'Schedule (optional)',
   publicCopy: 'Public copy & CTAs',
   publicCopyHint:
-    'Help/upgrade URLs and register notice are operator-owned (empty by default). Product credit “imgli” stays; use this for your docs and trial copy—do not strip open-source branding.',
+    'Help/upgrade URLs and register notice are operator-owned (empty by default); use this for your docs and trial copy.',
   publicStats: 'Public instance stats',
   publicStatsHint:
     'Off by default. When enabled, the guest homepage shows coarse local stats (uptime days, image count, etc.). Good for public trial instances; leave off for private self-host.',
@@ -351,11 +351,11 @@ export default {
   registerNotice: 'Register notice (optional)',
   registerNoticeHint: 'Shown on the register form only. Use for trial limits etc. Leave empty to hide.',
   shareBranding: 'Share page site footer',
-  shareBrandingOff: 'OSS credit only',
-  shareBrandingSite: 'Credit + site name',
-  shareBrandingLinks: 'Credit + site + links',
+  shareBrandingOff: 'Hidden',
+  shareBrandingSite: 'Site name',
+  shareBrandingLinks: 'Site + links',
   shareBrandingHint:
-    'Open-source product credit (imgli) is always shown. “off” only hides this instance’s name/links; “links” shows help/upgrade when set.',
+    'Share page and public album footer: off hides it; site shows this site’s name; links also shows the configured help/upgrade URLs.',
   announcement: 'Announcement bar',
   announcementHint:
     'When enabled, shown at the top of the public UI. Optional schedule and dismiss. Stored in DB for self-host branding/links.',
@@ -395,11 +395,9 @@ export default {
   noDetail: '(no detail)',
   logsTotal: '{total} total',
   faviconUrl: 'Custom favicon URL',
-  faviconUrlHint: 'Replaces the browser tab icon only. Nav wordmark follows site name; carp mark stays. Empty = built-in icons.',
+  faviconUrlHint: 'Replaces the browser tab icon only. Nav wordmark follows site name; the mark stays fixed. Empty = built-in icons.',
   sourceUrl: 'Corresponding source URL',
   sourceUrlHint: 'Optional AGPL corresponding-source link for network services. Empty hides the link.',
-  ossCredit: 'Footer “based on imgli”',
-  ossCreditHint: 'On by default; can be turned off. Freeloading control is AGPL, not a forced watermark.',
   aboutEnabled: 'Enable About page /about',
   aboutEnabledHint: 'Simple static copy — not a CMS or theme builder.',
   aboutBody: 'About page body',

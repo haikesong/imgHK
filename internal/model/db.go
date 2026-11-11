@@ -316,7 +316,7 @@ func Seed(db *gorm.DB) error {
 			return err
 		}
 		for k, v := range map[string]string{
-			SettingSiteName:         `"img.li"`,
+			SettingSiteName:         `"HKSimg"`,
 			SettingRegistrationMode: `"open"`,
 			SettingGuestUpload:      `false`,
 			SettingPlazaEnabled:     `false`,

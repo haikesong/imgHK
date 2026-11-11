@@ -15,7 +15,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const theme = useGlobal((s) => s.theme)
   const toggleTheme = useGlobal((s) => s.toggleTheme)
   const { data: config } = useConfig()
-  const siteName = (config?.site_name || 'imgli').trim() || 'imgli'
+  const siteName = (config?.site_name || '').trim()
   const sourceUrl = (config?.source_url || '').trim()
   return (
     <div className="flex min-h-screen">

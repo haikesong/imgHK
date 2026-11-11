@@ -17,7 +17,7 @@ export function GuestLayout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-10 flex h-14 items-center gap-9 border-b border-border bg-surface px-8 max-md:gap-4 max-md:px-4">
-        <span className="flex items-center text-ink" aria-label={config?.site_name?.trim() || 'img.li'}>
+        <span className="flex items-center text-ink" aria-label={config?.site_name?.trim() || undefined}>
           <BrandLockup badge={guestOn ? 'GUEST' : undefined} word={config?.site_name} />
         </span>
         <div className="ml-auto flex items-center gap-3.5">
@@ -49,7 +49,6 @@ export function GuestLayout() {
       <SiteFooter
         footer={config?.footer}
         siteName={config?.site_name}
-        ossCredit={config?.oss_credit}
         sourceUrl={config?.source_url}
         aboutEnabled={!!config?.about_enabled}
       />

@@ -16,7 +16,7 @@ export function DiscoverLayout() {
   return (
     <>
       <header className="sticky top-0 z-10 flex h-14 items-center gap-9 border-b border-border bg-surface px-8 max-md:gap-4 max-md:px-4">
-        <Link to="/explore" className="flex items-center text-ink no-underline hover:text-ink" aria-label={config?.site_name?.trim() || 'img.li'}>
+        <Link to="/explore" className="flex items-center text-ink no-underline hover:text-ink" aria-label={config?.site_name?.trim() || undefined}>
           <BrandLockup word={config?.site_name} />
         </Link>
         <div className="ml-auto flex items-center gap-3.5">

@@ -24,7 +24,7 @@ export function SharePage() {
   const cfg = useConfig()
   const data = q.data
   const [pw, setPw] = useState('')
-  const siteName = (cfg.data?.site_name || 'imgli').trim() || 'imgli'
+  const siteName = (cfg.data?.site_name || '').trim()
 
   const notFound = q.error instanceof ApiError && q.error.httpStatus === 404
   const needPw = !!(data?.password_required || (data?.has_access_password && !data?.links?.url))
@@ -38,7 +38,7 @@ export function SharePage() {
   return (
     <div className="min-h-dvh text-ink">
       <header className="flex items-center justify-between border-b border-border bg-surface px-5 py-3">
-        <Link to="/" className="flex items-center text-inherit no-underline" aria-label={siteName}>
+        <Link to="/" className="flex items-center text-inherit no-underline" aria-label={siteName || undefined}>
           <BrandLockup word={cfg.data?.site_name} />
         </Link>
         <div className="flex items-center gap-2.5">

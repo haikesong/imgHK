@@ -44,7 +44,7 @@ export function AuthPage() {
   const config = useConfig()
   const regClosed = config.data?.registration_mode === 'closed'
   const regInvite = config.data?.registration_mode === 'invite'
-  const siteName = (config.data?.site_name || 'imgli').trim() || 'imgli'
+  const siteName = (config.data?.site_name || '').trim()
   const sourceUrl = (config.data?.source_url || '').trim()
   const registerNotice = pickLocale(config.data?.register_notice, lang)
   // 浅场景文案：?from=picgo|blog|private 或 utm_campaign（非多触点 funnel）

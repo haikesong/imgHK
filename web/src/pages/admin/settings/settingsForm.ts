@@ -135,7 +135,6 @@ export interface FormState {
   shareBranding: ShareBranding
   faviconUrl: string
   sourceUrl: string
-  ossCredit: 'on' | 'off'
   aboutEnabled: boolean
   aboutBody: FormLocale
   welcomeEmail: boolean
@@ -241,7 +240,6 @@ export function formOf(s: AdminSettings): FormState {
         : 'site',
     faviconUrl: s.favicon_url ?? '',
     sourceUrl: s.source_url ?? '',
-    ossCredit: s.oss_credit === 'off' ? 'off' : 'on',
     aboutEnabled: !!s.about_enabled,
     aboutBody: toLocaleMap(s.about_body),
     welcomeEmail: s.welcome_email !== false,

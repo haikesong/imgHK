@@ -69,7 +69,7 @@ func (s *Service) config() (Config, error) {
 }
 
 func (s *Service) siteName() string {
-	name := "img.li"
+	name := "图床"
 	var v string
 	if err := settings.New(s.db).Get(model.SettingSiteName, &v); err == nil && v != "" {
 		name = v

@@ -294,7 +294,7 @@ export default {
   upgradeDockerBlocked: 'Container environment detected: binary replace is disabled.',
   dockerUpgradeHint: 'Container install: upgrade via image tag; do not use binary replace.',
   dockerRedeploySnippet:
-    '# Example (adjust to your compose)\ndocker pull ghcr.io/yixian-huang/imgli:latest\ndocker compose up -d',
+    '# Example (adjust to your compose)\ndocker pull ghcr.io/haikesong/imghk:main\ndocker compose up -d',
   cleanupSection: 'Lifecycle cleanup',
   cleanupHint:
     'Preview/run: expired, aged trash, group retention soft-delete, group force-age hard purge (default max 200 per kind; group jobs also cap 500/group). Origin cleanup ≠ CDN bill.',

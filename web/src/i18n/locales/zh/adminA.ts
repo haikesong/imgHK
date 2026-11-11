@@ -292,7 +292,7 @@ export default {
   upgradeDockerBlocked: '检测到容器环境：不会替换二进制。',
   dockerUpgradeHint: '容器安装：请用镜像 tag 升级，勿使用一键二进制替换。',
   dockerRedeploySnippet:
-    '# 示例（按你的 compose 调整）\ndocker pull ghcr.io/yixian-huang/imgli:latest\ndocker compose up -d',
+    '# 示例（按你的 compose 调整）\ndocker pull ghcr.io/haikesong/imghk:main\ndocker compose up -d',
   cleanupSection: '生命周期清理',
   cleanupHint:
     '预览/执行：过期图、陈旧回收站、组保留期软删、组强制存活硬清。默认每类最多 200（组任务内部另有每组 500 上限）。清理源站不等于 CDN 账单清零。',

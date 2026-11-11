@@ -17,8 +17,8 @@ func TestSubsetFontCoversWatermarkSamples(t *testing.T) {
 		t.Fatal("parsedFont nil")
 	}
 	samples := []string{
-		"img.li",
-		"图鲤",
+		"HKSimg",
+		"图床",
 		"白栗©2026",
 		"白栗测试水印一段较长的文字内容",
 		"ABCDEFGxyz 0123456789",

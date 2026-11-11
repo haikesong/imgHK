@@ -18,6 +18,6 @@ export default {
   },
   help: {
     ftpPreferProxy:
-      '优先用 OpenList/rclone 等将 FTP 转为 WebDAV 或同步到本地/S3，再接入 imgli。内置 FTP 为功能受限兼容层。',
+      '优先用 OpenList/rclone 等将 FTP 转为 WebDAV 或同步到本地/S3，再接入本服务。内置 FTP 为功能受限兼容层。',
   },
 }

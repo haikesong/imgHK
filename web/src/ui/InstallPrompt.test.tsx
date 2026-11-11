@@ -29,7 +29,7 @@ it('初始无 beforeinstallprompt 时不渲染', () => {
 it('beforeinstallprompt 后显示安装文案与按钮', () => {
   render(<InstallPrompt />)
   dispatchBeforeInstallPrompt()
-  expect(screen.getByText('把 img.li 装到主屏,像应用一样打开')).toBeInTheDocument()
+  expect(screen.getByText('把本站装到主屏，像应用一样打开')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '安装到主屏' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '不再提示' })).toBeInTheDocument()
 })

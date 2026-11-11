@@ -4,7 +4,6 @@ import { setOnForbidden, setOnUnauthorized } from './api/client'
 import { useConfig, useSession } from './api/hooks'
 import { t, useT } from './i18n'
 import { setHtmlLang } from './i18n/lang'
-import { BRAND_WORDMARK } from './ui/Brand'
 import { useGlobal } from './store'
 import { AlbumDetailPage } from './pages/albums/AlbumDetailPage'
 import { AlbumsPage } from './pages/albums/AlbumsPage'
@@ -55,13 +54,10 @@ export function App() {
     }
   }, [session?.preferences?.lang, setLang])
   useEffect(() => {
-    const name = config.data?.site_name?.trim() || BRAND_WORDMARK
-    // 标题以站点显示名为主；仅在仍是产品默认站名时附加中文副标
-    document.title =
-      name === BRAND_WORDMARK || name === 'img.li'
-        ? `${BRAND_WORDMARK} · ${t('meta.brandCn')}`
-        : name
-  }, [config.data?.site_name, lang, t])
+    // 标题只用后台配置的站点名；配置未到时保留服务端写好的静态标题，避免闪回旧品牌。
+    const name = config.data?.site_name?.trim()
+    if (name) document.title = name
+  }, [config.data?.site_name])
   useEffect(() => {
     const href = (config.data?.favicon_url || '').trim()
     const sel = 'link[data-imgli-favicon="1"]'

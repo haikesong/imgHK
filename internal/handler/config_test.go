@@ -28,7 +28,7 @@ type configBody struct {
 	} `json:"public_stats"`
 }
 
-// TestConfigDefaults 播种库默认值下：site_name="img.li"、registration_mode="open"、
+// TestConfigDefaults 播种库默认值下：site_name="HKSimg"、registration_mode="open"、
 // guest_upload_enabled=false，guest 限额取自播种的游客组（5MB/3/常见后缀）。
 func TestConfigDefaults(t *testing.T) {
 	db := model.TestDB(t)
@@ -58,8 +58,8 @@ func TestConfigDefaults(t *testing.T) {
 		t.Fatalf("decode data: %v, data=%s", err, e.Data)
 	}
 
-	if body.SiteName != "img.li" {
-		t.Errorf("site_name = %q, want img.li", body.SiteName)
+	if body.SiteName != "HKSimg" {
+		t.Errorf("site_name = %q, want HKSimg", body.SiteName)
 	}
 	if body.BaseURL != "https://img.li" {
 		t.Errorf("base_url = %q, want https://img.li (trim slash)", body.BaseURL)

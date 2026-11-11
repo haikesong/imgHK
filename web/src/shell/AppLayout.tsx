@@ -22,7 +22,6 @@ export function AppLayout() {
       <SiteFooter
         footer={config?.footer}
         siteName={config?.site_name}
-        ossCredit={config?.oss_credit}
         sourceUrl={config?.source_url}
         aboutEnabled={!!config?.about_enabled}
       />

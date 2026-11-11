@@ -184,7 +184,7 @@ export function SystemPage() {
               {t('adminA.checklistDismiss')}
             </Button>
             <a
-              href="https://github.com/yixian-huang/imgli/blob/main/docs/security-hardening.md#faq-reverse-proxy-loginregister-cross-site-rejected"
+              href="https://github.com/haikesong/imgHK/blob/main/docs/security-hardening.md#faq-reverse-proxy-loginregister-cross-site-rejected"
               target="_blank"
               rel="noreferrer"
             >
@@ -348,7 +348,7 @@ export function SystemPage() {
         <div className="mt-2 flex flex-wrap gap-3 text-[13px] [&_a]:text-ok">
           <Link to="/admin/policies">{t('adminA.linkPoliciesMigrate')}</Link>
           <Link to="/admin/logs">{t('nav.logs')}</Link>
-          <a href="https://github.com/yixian-huang/imgli/blob/main/docs/backup.md" target="_blank" rel="noreferrer">
+          <a href="https://github.com/haikesong/imgHK/blob/main/docs/backup.md" target="_blank" rel="noreferrer">
             {t('adminA.linkBackupDocs')}
           </a>
         </div>

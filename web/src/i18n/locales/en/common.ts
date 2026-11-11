@@ -16,8 +16,6 @@ export default {
   notFoundDesc: 'The link may be broken or mistyped',
   announcementAria: 'Site announcement',
   announcementKicker: 'NOTICE',
-  /** Appended only when site_name does not already mention img.li / imgli */
-  footerOss: 'open-source imgli',
   about: 'About',
   sourceCode: 'Source',
   backHome: 'Back home',

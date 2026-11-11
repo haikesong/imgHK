@@ -18,6 +18,6 @@ export default {
   },
   help: {
     ftpPreferProxy:
-      'Prefer OpenList/rclone to expose FTP as WebDAV or sync to local/S3, then use imgli. Built-in FTP is a limited compatibility tier.',
+      'Prefer OpenList/rclone to expose FTP as WebDAV or sync to local/S3, then use this service. Built-in FTP is a limited compatibility tier.',
   },
 }

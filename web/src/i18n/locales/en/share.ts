@@ -13,8 +13,6 @@ export default {
   passwordPlaceholder: 'Access password',
   passwordSubmit: 'Unlock',
   passwordWrong: 'Incorrect password',
-  /** Always-on open-source product credit (not removed by share_branding=off) */
-  ossCredit: 'Powered by open-source imgli',
   brandVia: 'This site: {site}',
   helpLink: 'Docs',
   upgradeLink: 'Self-host / upgrade',

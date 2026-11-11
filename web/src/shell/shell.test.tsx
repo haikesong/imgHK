@@ -80,7 +80,7 @@ afterEach(() => vi.unstubAllGlobals())
 it('已登录：/ 渲染导航与占位页', async () => {
   mockBackend(true)
   renderAt('/')
-  expect(await screen.findByRole('link', { name: 'img.li 首页' })).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: '首页' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '我的图片' })).toHaveAttribute('href', '/images')
   expect(screen.getByRole('link', { name: '相册' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '设置' })).toBeInTheDocument()
@@ -116,7 +116,7 @@ it('站内未知路径渲染 404 页', async () => {
 it('移动端 4-Tab 存在且指向四页面', async () => {
   mockBackend(true)
   renderAt('/')
-  await screen.findByRole('link', { name: 'img.li 首页' })
+  await screen.findByRole('link', { name: '首页' })
   const tabbar = screen.getByTestId('tabbar')
   const links = [...tabbar.querySelectorAll('a')].map((a) => a.getAttribute('href'))
   expect(links).toEqual(['/', '/images', '/albums', '/settings'])
@@ -146,7 +146,7 @@ it('未登录+游客开关关：/ 仍展示上传落地页并提示登录', asyn
 it('Nav 头像:avatar_url 非空渲染 img', async () => {
   mockBackend(true, false, { ...user, avatar_url: '/avatar/1?v=9' })
   renderAt('/')
-  await screen.findByRole('link', { name: 'img.li 首页' })
+  await screen.findByRole('link', { name: '首页' })
   const img = document.querySelector('img[src="/avatar/1?v=9"]')
   expect(img).toBeTruthy()
 })
@@ -154,7 +154,7 @@ it('Nav 头像:avatar_url 非空渲染 img', async () => {
 it('Nav 头像:avatar_url 空时显示首字母无 img', async () => {
   mockBackend(true, false, { ...user, avatar_url: '' })
   renderAt('/')
-  await screen.findByRole('link', { name: 'img.li 首页' })
+  await screen.findByRole('link', { name: '首页' })
   expect(document.querySelector('header img')).toBeNull()
   // nickname 凌 → 按钮文本为首字母
   expect(screen.getByRole('button', { name: '凌' })).toBeInTheDocument()

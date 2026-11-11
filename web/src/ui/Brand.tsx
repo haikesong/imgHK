@@ -1,10 +1,6 @@
 import type { CSSProperties } from 'react'
 import { cn } from '../lib/cn'
 
-/** 产品字标（固定小写 img.li，与域名/品牌「图鲤」一致）。 */
-export const BRAND_WORDMARK = 'img.li'
-export const BRAND_CN = '图鲤'
-
 type MarkProps = {
   size?: number
   className?: string
@@ -44,13 +40,6 @@ type LockupProps = {
   style?: CSSProperties
 }
 
-export function isCustomSiteWord(name?: string | null): boolean {
-  const n = (name || '').trim()
-  if (!n) return false
-  const lower = n.toLowerCase()
-  return lower !== BRAND_WORDMARK && lower !== 'imgli'
-}
-
 export function BrandLockup({
   markSize = 20,
   beta,
@@ -62,12 +51,12 @@ export function BrandLockup({
   style,
 }: LockupProps) {
   const tag = badge ?? (beta ? 'BETA' : undefined)
-  const custom = isCustomSiteWord(word)
-  const label = custom ? (word || '').trim() : BRAND_WORDMARK
+  // 站点名尚未加载（或后台留空）时只显示图形标记，避免先闪出任何旧品牌名。
+  const label = (word || '').trim()
   return (
     <span className={cn('inline-flex items-center gap-[9px] leading-none text-inherit', className)} style={style}>
       <BrandMark size={markSize} />
-      {custom ? (
+      {label ? (
         <span
           className={cn(
             'max-w-[12em] overflow-hidden text-ellipsis whitespace-nowrap font-sans text-[14.5px] font-extrabold tracking-[-0.02em] leading-none',
@@ -77,13 +66,7 @@ export function BrandLockup({
         >
           {label}
         </span>
-      ) : (
-        <span className={cn('font-mono text-[14.5px] font-extrabold tracking-[-0.03em] leading-none', wordClassName)}>
-          img
-          <span className={cn('text-muted opacity-90', invert && 'text-current opacity-50')}>.</span>
-          li
-        </span>
-      )}
+      ) : null}
       {tag ? (
         <span
           className={cn(

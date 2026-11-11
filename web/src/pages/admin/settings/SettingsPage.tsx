@@ -81,7 +81,7 @@ export function SettingsPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `imgli-lexicon-${new Date().toISOString().slice(0, 10)}.txt`
+    a.download = `lexicon-${new Date().toISOString().slice(0, 10)}.txt`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -241,7 +241,6 @@ export function SettingsPage() {
         share_branding: form.shareBranding,
         favicon_url: form.faviconUrl.trim(),
         source_url: form.sourceUrl.trim(),
-        oss_credit: form.ossCredit,
         about_enabled: form.aboutEnabled,
         about_body: {
           zh: form.aboutBody.zh.trim(),

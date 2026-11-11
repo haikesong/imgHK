@@ -3,7 +3,6 @@ import type { HTMLInject, SiteAnnouncement, SiteFooter as SiteFooterConfig } fro
 import { useT } from '../i18n'
 import { localeFingerprint, pickLocale } from '../lib/locale'
 import { cn } from '../lib/cn'
-import { BRAND_WORDMARK } from './Brand'
 
 const DISMISS_KEY = 'imgli_announcement_dismissed'
 
@@ -94,28 +93,20 @@ export function AnnouncementBar({ announcement }: { announcement?: SiteAnnouncem
 type SiteFooterProps = {
   footer?: SiteFooterConfig | null
   siteName?: string | null
-  ossCredit?: 'on' | 'off' | string | null
   sourceUrl?: string | null
   aboutEnabled?: boolean
 }
 
-export function SiteFooter({ footer, siteName, ossCredit, sourceUrl, aboutEnabled }: SiteFooterProps) {
+export function SiteFooter({ footer, siteName, sourceUrl, aboutEnabled }: SiteFooterProps) {
   const { t, lang } = useT()
   const groups = footer?.groups?.filter((g) => g.links?.length) ?? []
-  const name = (siteName || '').trim() || BRAND_WORDMARK
+  const name = (siteName || '').trim()
   const year = new Date().getFullYear()
-  const nameLower = name.toLowerCase()
-  const creditOn = (ossCredit || 'on') !== 'off'
-  const showOssSuffix =
-    creditOn && !nameLower.includes('img.li') && !nameLower.includes('imgli') && !name.includes('图鲤')
   const src = (sourceUrl || '').trim()
   const metaQuiet = 'text-muted opacity-80'
   const metaBits = (
     <>
-      <span>
-        © {year} {name}
-        {showOssSuffix ? ` · ${t('common.footerOss')}` : ''}
-      </span>
+      <span>{`© ${year}${name ? ` ${name}` : ''}`}</span>
       {aboutEnabled ? (
         <a href="/about" className={metaQuiet}>
           {t('common.about')}

@@ -3,7 +3,7 @@ export default {
   headlineLine2: '你的图片外链，就这么简单。',
   // Modified 2026-11-10 (HKSimg fork): removed the upstream product credit from
   // the UI. The AGPL-3.0 source offer is provided via `source_url` on the auth
-  // and site footers. {site} 为当前站点名（默认即 img.li）
+  // and site footers. {site} 为当前站点名
   copyright: '© {year} {site}',
 
   signInKicker: 'SIGN IN',

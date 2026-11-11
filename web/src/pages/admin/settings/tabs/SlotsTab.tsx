@@ -184,17 +184,6 @@ export function SlotsTab({ form, set, setForm, setAnn, patchFooterGroup, patchFo
           <span className={s.hint}>{t('adminB.sourceUrlHint')}</span>
           <div className={s.field}>
             <div className={s.sliderHead}>
-              <span className={s.label}>{t('adminB.ossCredit')}</span>
-              <Toggle
-                aria-label={t('adminB.ossCredit')}
-                checked={form.ossCredit === 'on'}
-                onChange={(v) => set('ossCredit', v ? 'on' : 'off')}
-              />
-            </div>
-            <span className={s.hint}>{t('adminB.ossCreditHint')}</span>
-          </div>
-          <div className={s.field}>
-            <div className={s.sliderHead}>
               <span className={s.label}>{t('adminB.aboutEnabled')}</span>
               <Toggle
                 aria-label={t('adminB.aboutEnabled')}

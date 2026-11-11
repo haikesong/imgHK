@@ -11,7 +11,7 @@ func TestGetSeededAndRoundTrip(t *testing.T) {
 	svc := New(model.TestDB(t))
 
 	var name string
-	if err := svc.Get(model.SettingSiteName, &name); err != nil || name != "img.li" {
+	if err := svc.Get(model.SettingSiteName, &name); err != nil || name != "HKSimg" {
 		t.Errorf("site_name = %q, err=%v", name, err)
 	}
 

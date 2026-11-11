@@ -1172,7 +1172,7 @@ func TestAdminSettingsGateAndDefaults(t *testing.T) {
 	if err := json.Unmarshal(e.Data, &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.SiteName != "img.li" || got.RegistrationMode != "open" {
+	if got.SiteName != "HKSimg" || got.RegistrationMode != "open" {
 		t.Errorf("默认值 = %+v", got)
 	}
 	if got.PlazaEnabled {
@@ -1232,7 +1232,7 @@ func TestAdminSettingsPutValidationAndAudit(t *testing.T) {
 		SiteName string `json:"site_name"`
 	}
 	json.Unmarshal(e.Data, &stillDefault)
-	if stillDefault.SiteName != "img.li" {
+	if stillDefault.SiteName != "HKSimg" {
 		t.Errorf("校验失败的请求不应产生任何副作用: site_name = %q", stillDefault.SiteName)
 	}
 

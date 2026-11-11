@@ -26,8 +26,8 @@ func TestGetSettingsDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m["site_name"] != "img.li" {
-		t.Errorf("site_name = %v, want img.li", m["site_name"])
+	if m["site_name"] != "HKSimg" {
+		t.Errorf("site_name = %v, want HKSimg", m["site_name"])
 	}
 	if m["registration_mode"] != "open" {
 		t.Errorf("registration_mode = %v, want open", m["registration_mode"])

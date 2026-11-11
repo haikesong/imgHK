@@ -1,6 +1,6 @@
 {
-  "name": "img.li · 图鲤",
-  "short_name": "img.li",
+  "name": "图床",
+  "short_name": "图床",
   "description": "图片一跃成外链 · Images, one leap to a link",
   "start_url": "/",
   "scope": "/",

@@ -21,7 +21,7 @@ export function mergeLexiconText(left: string, right: string): string {
 /** 导出为带简短头注释的 .txt */
 export function formatLexiconExport(keywords: string[], siteName?: string): string {
   const header = [
-    '# imgli OCR keyword lexicon',
+    '# OCR keyword lexicon',
     siteName ? `# site: ${siteName}` : null,
     `# count: ${keywords.length}`,
     `# exported: ${new Date().toISOString()}`,

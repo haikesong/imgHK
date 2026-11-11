@@ -144,8 +144,8 @@ it('渲染相册名、作者链、复制相册链接与页脚 branding', async (
   })
   const author = screen.getByRole('link', { name: /作者 Alice/ })
   expect(author).toHaveAttribute('href', '/u/alice')
-  expect(screen.getByTestId('album-share-brand-foot')).toHaveTextContent(/开源图床/)
   expect(screen.getByTestId('album-share-brand-foot')).toHaveTextContent(/本站 img\.li/)
+  expect(screen.getByTestId('album-share-brand-foot')).not.toHaveTextContent(/开源图床|图鲤|imgli/)
 
   await user.click(screen.getAllByRole('button', { name: '复制相册链接' })[0]!)
   await waitFor(() => {

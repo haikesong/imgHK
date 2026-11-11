@@ -803,7 +803,7 @@ export function PoliciesPage() {
                       <Input
                         label="Endpoint"
                         value={form.davEndpoint}
-                        placeholder="https://dav.example.com/imgli"
+                        placeholder="https://dav.example.com/images"
                         onChange={(e) => set('davEndpoint', e.target.value)}
                       />
                       <Input
@@ -844,7 +844,7 @@ export function PoliciesPage() {
                       <Input
                         label={t('adminB.ftpPrefix')}
                         value={form.ftpPrefix}
-                        placeholder="imgli"
+                        placeholder="images"
                         onChange={(e) => set('ftpPrefix', e.target.value)}
                       />
                       <div className={toggleRowClass}>
@@ -915,7 +915,7 @@ export function PoliciesPage() {
                       <Input
                         label={t('adminB.presignDomain')}
                         value={form.s3PresignDomain}
-                        placeholder="https://s3.img.li"
+                        placeholder="https://s3.example.com"
                         extra={<span className={hintClass}>{t('adminB.presignDomainHint')}</span>}
                         onChange={(e) => set('s3PresignDomain', e.target.value)}
                       />

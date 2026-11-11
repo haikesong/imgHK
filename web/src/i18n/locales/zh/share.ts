@@ -13,8 +13,6 @@ export default {
   passwordPlaceholder: '访问口令',
   passwordSubmit: '解锁',
   passwordWrong: '口令错误，请重试',
-  /** 始终展示的开源产品署名（不因 share_branding 关闭而消失） */
-  ossCredit: '开源图床 imgli · 图鲤',
   brandVia: '本站 {site}',
   helpLink: '帮助文档',
   upgradeLink: '自托管 / 升级',

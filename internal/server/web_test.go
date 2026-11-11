@@ -8,6 +8,7 @@ import (
 	"testing/fstest"
 
 	"github.com/yixian-huang/imgli/internal/config"
+	"github.com/yixian-huang/imgli/internal/model"
 )
 
 var testDist = fstest.MapFS{
@@ -98,6 +99,28 @@ func TestWebNonSPAPathsKeepEnvelope(t *testing.T) {
 		if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), `"not_found"`) {
 			t.Errorf("%s %s = %d %q, want 404 envelope", c.method, c.path, rec.Code, rec.Body.String())
 		}
+	}
+}
+
+func TestWebInjectsConfiguredSiteName(t *testing.T) {
+	cfg, _ := config.Load("")
+	dist := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte(`<!doctype html><html><head>` +
+			`<meta property="og:title" content="图床" /><title>图床</title>` +
+			`<meta name="apple-mobile-web-app-title" content="图床" />` +
+			`</head><body><div id="root"></div></body></html>`)},
+		"manifest.webmanifest": &fstest.MapFile{Data: []byte(`{"name":"图床","short_name":"图床"}`)},
+	}
+	s := New(Options{Cfg: cfg, DB: model.TestDB(t), Web: dist})
+
+	body := webGet(t, s, "/").Body.String()
+	if !strings.Contains(body, "<title>HKSimg</title>") || !strings.Contains(body, `content="HKSimg"`) {
+		t.Errorf("index HTML 未注入站点名: %s", body)
+	}
+
+	manifest := webGet(t, s, "/manifest.webmanifest").Body.String()
+	if !strings.Contains(manifest, `"name": "HKSimg"`) || !strings.Contains(manifest, `"short_name": "HKSimg"`) {
+		t.Errorf("manifest 未注入站点名: %s", manifest)
 	}
 }
 

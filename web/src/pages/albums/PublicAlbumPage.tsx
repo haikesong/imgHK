@@ -48,9 +48,9 @@ export function PublicAlbumPage() {
   useEffect(() => {
     const albumName = meta.data?.name?.trim()
     if (!albumName) return
-    const site = (cfg.data?.site_name || '').trim() || 'imgli'
+    const site = (cfg.data?.site_name || '').trim()
     const prev = document.title
-    document.title = `${albumName} · ${site}`
+    document.title = site ? `${albumName} · ${site}` : albumName
     return () => {
       document.title = prev
     }
@@ -189,7 +189,7 @@ export function PublicAlbumPage() {
       )}
 
       <ShareBrandFooter
-        siteName={(cfg.data?.site_name || 'imgli').trim() || 'imgli'}
+        siteName={(cfg.data?.site_name || '').trim()}
         branding={cfg.data?.share_branding || 'off'}
         helpURL={cfg.data?.help_url}
         upgradeURL={cfg.data?.upgrade_url}

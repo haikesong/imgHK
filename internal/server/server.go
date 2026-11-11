@@ -39,6 +39,12 @@ import (
 	"github.com/yixian-huang/imgli/web"
 )
 
+// maxUploadBytes 是上传请求体的硬上限（含 multipart 开销），超出直接 413。
+// 单文件实际大小还受用户组 max_file_size 约束，后台设置必须 ≤ 本值。
+// 上游原值 64MiB；本 fork 放宽到 256MiB，与 Caddy request_body 250MB 对齐，
+// 给 Cloudflare 橙云 100MB（Free/Pro）留出余量，换套餐或改灰云后无需重建镜像。
+const maxUploadBytes = 256 << 20
+
 // Options 是 server 的全部外部依赖。Cfg 必填；DB 可为 nil（仅注册 healthz，用于轻量测试）；
 // Web 为前端构建产物文件系统，nil 时用 go:embed 的 web/dist。
 type Options struct {
@@ -151,7 +157,7 @@ func (s *Server) mountAPI() {
 	uploadH := &handler.UploadHandlers{D: handler.UploadDeps{
 		Svc:         upSvc,
 		Res:         storageRes,
-		MaxBytes:    64 << 20,
+		MaxBytes:    maxUploadBytes,
 		FetchAllow:  fetchAllow,
 		FetchClient: handler.NewFetchClient(fetchAllow),
 		Hooks:       hooks,

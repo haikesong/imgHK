@@ -58,6 +58,22 @@ git rebase upstream/main
 
 `upstream` points at <https://github.com/yixian-huang/imgli>.
 
+After a sync, verify the fork customisations survived:
+
+```bash
+git log --oneline upstream/main..main          # fork commits still on top
+grep -rn "图鲤\|开源项目 imgli" web/src/i18n/locales web/src/ui || true
+cd web && npx vitest run src/pages/auth/AuthPage.test.tsx
+```
+
+- Resolve conflicts by keeping the fork changes. Conflicts usually land in
+  `web/src/i18n/locales/*/auth.ts`, `web/src/pages/auth/AuthPage.tsx` and
+  `AuthShell.tsx`.
+- Never `git reset --hard upstream/main`: it also drops the lowercase image-name
+  commit (`7c5b41e`) that the GHCR workflow depends on.
+- A rebase/merge keeps the existing modifications, but it does **not** remove
+  new upstream branding added elsewhere. Review the diff and grep again.
+
 ## Rules for this fork / 本仓库的约束
 
 1. Do not remove or weaken the AGPL license, copyright notices or the source

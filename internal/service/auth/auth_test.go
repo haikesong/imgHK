@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -123,6 +124,97 @@ func TestLoginSessionLifecycle(t *testing.T) {
 	}
 	if got, _ := svc.UserBySession("garbage"); got != nil {
 		t.Error("垃圾 token 应返回 nil")
+	}
+}
+
+func TestLoginThrottleLocksAccountThenRecovers(t *testing.T) {
+	const email = "alice@example.test"
+	svc, _ := newSvc(t)
+	if _, err := svc.Register("alice", email, "passw0rd", ""); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+
+	for i := 0; i < loginAccountPolicy.threshold-1; i++ {
+		if _, _, err := svc.Login("alice", "wrong-pw", "1.2.3.4", "ua"); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("第 %d 次应仍为凭据错误, got %v", i+1, err)
+		}
+	}
+	_, _, err := svc.Login("alice", "wrong-pw", "1.2.3.4", "ua")
+	if !errors.Is(err, ErrLoginThrottled) {
+		t.Fatalf("达到阈值应触发锁定, got %v", err)
+	}
+	var te *LoginThrottledError
+	if !errors.As(err, &te) || te.RetryAfter <= 0 {
+		t.Fatalf("锁定错误应带 RetryAfter: %#v", err)
+	}
+	if _, _, err := svc.Login("alice", "passw0rd", "1.2.3.4", "ua"); !errors.Is(err, ErrLoginThrottled) {
+		t.Fatalf("锁定期内正确密码也应拒绝, got %v", err)
+	}
+
+	now = now.Add(te.RetryAfter + time.Second)
+	if _, _, err := svc.Login("alice", "passw0rd", "1.2.3.4", "ua"); err != nil {
+		t.Fatalf("锁定过期后正确密码应成功, got %v", err)
+	}
+}
+
+func TestLoginSuccessResetsThrottle(t *testing.T) {
+	const email = "alice@example.test"
+	svc, _ := newSvc(t)
+	if _, err := svc.Register("alice", email, "passw0rd", ""); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+
+	for i := 0; i < loginAccountPolicy.threshold-1; i++ {
+		if _, _, err := svc.Login("alice", "wrong-pw", "1.2.3.4", "ua"); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("登录成功前第 %d 次应仍为凭据错误, got %v", i+1, err)
+		}
+	}
+	if _, _, err := svc.Login("alice", "passw0rd", "1.2.3.4", "ua"); err != nil {
+		t.Fatalf("正确密码应成功: %v", err)
+	}
+	for i := 0; i < loginAccountPolicy.threshold-1; i++ {
+		if _, _, err := svc.Login("alice", "wrong-pw", "1.2.3.4", "ua"); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("成功清空后第 %d 次应重新计数, got %v", i+1, err)
+		}
+	}
+}
+
+func TestLoginThrottleUsesUserIDAcrossIdentifiers(t *testing.T) {
+	const email = "alice@example.test"
+	svc, _ := newSvc(t)
+	if _, err := svc.Register("alice", email, "passw0rd", ""); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+
+	// 邮箱 2 次 + 用户名 2 次，都应对应同一个 user ID；第 5 次触发锁定。
+	for _, account := range []string{email, email, "alice", "alice"} {
+		if _, _, err := svc.Login(account, "wrong-pw", "1.2.3.4", "ua"); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("%s 登录应仍为凭据错误, got %v", account, err)
+		}
+	}
+	if _, _, err := svc.Login(email, "wrong-pw", "1.2.3.4", "ua"); !errors.Is(err, ErrLoginThrottled) {
+		t.Fatalf("切换邮箱/用户名不应绕过账号级锁定, got %v", err)
+	}
+}
+
+func TestLoginThrottleLocksIPAcrossAccounts(t *testing.T) {
+	svc, _ := newSvc(t)
+	now := time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+
+	const ip = "203.0.113.9"
+	ipKey := loginIPThrottleKey(ip)
+	for i := 0; i < loginIPPolicy.threshold; i++ {
+		svc.recordLoginFailure(loginAccountKey(fmt.Sprintf("ghost%d", i)), ipKey, now)
+	}
+	if _, _, err := svc.Login("alice", "passw0rd", ip, "ua"); !errors.Is(err, ErrLoginThrottled) {
+		t.Fatalf("同一 IP 跨账号累计失败应触发 IP 锁定, got %v", err)
 	}
 }
 
@@ -365,7 +457,7 @@ func TestRegisterWithMetaUTMAndReferer(t *testing.T) {
 
 // fakeMailer 并发安全邮件桩;异步发送经 waitReset/waitVerify 轮询。
 type fakeMailer struct {
-	welcome [][3]string
+	welcome                          [][3]string
 	mu                               sync.Mutex
 	resetTo, resetLink, resetLang    string
 	verifyTo, verifyLink, verifyLang string
@@ -392,7 +484,6 @@ func (f *fakeMailer) SendWelcome(to, baseURL, lang string) error {
 	f.welcome = append(f.welcome, [3]string{to, baseURL, lang})
 	return nil
 }
-
 
 func (f *fakeMailer) SendVerifyEmail(to, link, lang string) error {
 	f.mu.Lock()

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,6 +63,18 @@ func failAuth(w http.ResponseWriter, err error) {
 		Fail(w, http.StatusBadRequest, "invite_invalid", "邀请码无效或已被使用")
 	case errors.Is(err, auth.ErrInvalidCredentials):
 		Fail(w, http.StatusUnauthorized, "invalid_credentials", "账号或密码错误")
+	case errors.Is(err, auth.ErrLoginThrottled):
+		retry := time.Minute
+		var te *auth.LoginThrottledError
+		if errors.As(err, &te) && te.RetryAfter > 0 {
+			retry = te.RetryAfter
+		}
+		secs := int((retry + time.Second - 1) / time.Second)
+		if secs < 1 {
+			secs = 1
+		}
+		w.Header().Set("Retry-After", strconv.Itoa(secs))
+		Fail(w, http.StatusTooManyRequests, CodeRateLimited, "登录尝试过于频繁，请稍后再试")
 	case errors.Is(err, auth.ErrUserBanned):
 		Fail(w, http.StatusForbidden, "banned", "账号已被封禁")
 	case errors.Is(err, auth.ErrTokenInvalid):

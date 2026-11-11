@@ -201,6 +201,18 @@ type Session struct {
 	User *User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
+// LoginThrottle 登录失败节流。Key 是 scope+值的 SHA-256，不保存明文账号/IP。
+// Failures 是当前窗口内的失败次数；LockedUntil 非零且未过期时拒绝登录。
+// 成功登录后删除对应行，避免长期残留。
+type LoginThrottle struct {
+	Key         string    `gorm:"primaryKey;size:64"`
+	Scope       string    `gorm:"size:16;not null;index"` // account | ip
+	Failures    int       `gorm:"not null;default:0"`
+	WindowStart time.Time `gorm:"not null"`
+	LockedUntil time.Time `gorm:"index"`
+	UpdatedAt   time.Time
+}
+
 // AuthToken 邮箱验证/密码重置/改邮箱一次性令牌。
 type AuthToken struct {
 	ID        uint64 `gorm:"primaryKey"`
@@ -325,7 +337,7 @@ type RefererImageStat struct {
 func AllModels() []any {
 	return []any{
 		&User{}, &UserGroup{}, &File{}, &Image{}, &Album{},
-		&APIToken{}, &Session{}, &AuthToken{}, &InviteCode{},
+		&APIToken{}, &Session{}, &LoginThrottle{}, &AuthToken{}, &InviteCode{},
 		&StoragePolicy{}, &Setting{}, &Task{}, &AuditLog{}, &SchemaVersion{},
 		&StorageMigrateJob{},
 		&AccessStat{}, &RefererStat{}, &RefererImageStat{}, &AlbumAccessStat{},

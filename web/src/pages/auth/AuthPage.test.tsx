@@ -235,7 +235,7 @@ it('开放模式：注册表单无邀请码框', async () => {
   expect(screen.queryByLabelText('邀请码')).not.toBeInTheDocument()
 })
 
-it('登录页页脚不显示上游产品署名，并提供 AGPL 源码入口', async () => {
+it('登录页页脚版权行只显示 © 年份 站点名，并提供 AGPL 源码入口', async () => {
   vi.stubGlobal('fetch', vi.fn((url: RequestInfo | URL) => {
     const u = String(url)
     if (u.endsWith('/config'))
@@ -249,10 +249,16 @@ it('登录页页脚不显示上游产品署名，并提供 AGPL 源码入口', a
     return Promise.resolve(jsonRes({ status: false, message: '', data: { code: 'not_found' } }, 404))
   }))
   renderPage()
-  expect(await screen.findByText(/© \d{4} HKSimg/)).toBeInTheDocument()
+  // 精确匹配整行：页脚版权行只允许 `© 年份 站点名`。
+  // 上游以后若在尾部追加任何署名/品牌文案，这条断言会直接失败。
+  const year = new Date().getFullYear()
+  expect(await screen.findByText(`© ${year} HKSimg`)).toBeInTheDocument()
   expect(screen.queryByText(/开源项目 imgli/)).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: '源码' })).toHaveAttribute(
     'href',
     'https://github.com/haikesong/imgHK',
   )
+  // 切到英文后版权行同样只允许 `© 年份 站点名`
+  fireEvent.click(screen.getByRole('button', { name: 'language' }))
+  expect(await screen.findByText(`© ${year} HKSimg`)).toBeInTheDocument()
 })

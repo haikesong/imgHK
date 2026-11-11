@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useConfig } from '../../api/hooks'
 import { useT } from '../../i18n'
 import { BrandLockup } from '../../ui/Brand'
+import { AuthSourceLink } from './AuthSourceLink'
 import { LangToggle } from '../../ui/LangToggle'
 import { useGlobal } from '../../store'
 
@@ -14,6 +15,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const theme = useGlobal((s) => s.theme)
   const toggleTheme = useGlobal((s) => s.toggleTheme)
   const { data: config } = useConfig()
+  const siteName = (config?.site_name || 'imgli').trim() || 'imgli'
+  const sourceUrl = (config?.source_url || '').trim()
   return (
     <div className="flex min-h-screen">
       <aside className="relative box-border flex flex-1 flex-col justify-between overflow-hidden bg-btn px-12 py-11 text-btn-text max-[900px]:hidden">
@@ -31,7 +34,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="relative z-[1] font-mono text-xs-plus opacity-45">
-          {t('auth.copyright', { year: new Date().getFullYear() })}
+          {t('auth.copyright', { year: new Date().getFullYear(), site: siteName })}
         </div>
         <div
           className="absolute -right-[60px] -bottom-[60px] size-[340px] border border-[rgba(128,128,128,0.3)]"
@@ -49,6 +52,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
           <LangToggle />
         </div>
         <div className="mx-auto my-auto w-[360px] max-w-full animate-[rise_0.3s_both] px-6 py-12">{children}</div>
+        <AuthSourceLink url={sourceUrl} />
       </main>
     </div>
   )

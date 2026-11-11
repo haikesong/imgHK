@@ -1,8 +1,10 @@
 export default {
   headlineLine1: '拖进来，粘贴走。',
   headlineLine2: '你的图片外链，就这么简单。',
-  // 产品开源署名固定；{site} 为当前站点名（默认即 img.li）
-  copyright: '© {year} {site} · 图鲤 · 开源项目 imgli',
+  // Modified 2026-11-10 (HKSimg fork): removed the upstream product credit from
+  // the UI. The AGPL-3.0 source offer is provided via `source_url` on the auth
+  // and site footers. {site} 为当前站点名（默认即 img.li）
+  copyright: '© {year} {site}',
 
   signInKicker: 'SIGN IN',
   createAccountKicker: 'CREATE ACCOUNT',

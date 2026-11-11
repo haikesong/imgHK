@@ -1,8 +1,10 @@
 export default {
   headlineLine1: 'Drop in, paste out.',
   headlineLine2: 'Your image links, that simple.',
-  // Fixed product OSS credit; {site} is the instance site_name (default img.li)
-  copyright: '© {year} {site} · open-source imgli',
+  // Modified 2026-11-10 (HKSimg fork): removed the upstream product credit from
+  // the UI. The AGPL-3.0 source offer is provided via `source_url` on the auth
+  // and site footers. {site} is the instance site_name (default img.li)
+  copyright: '© {year} {site}',
 
   signInKicker: 'SIGN IN',
   createAccountKicker: 'CREATE ACCOUNT',

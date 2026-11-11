@@ -9,6 +9,7 @@ import { STRONG_RE } from '../../lib/password'
 import { safeNext } from '../../lib/safeNext'
 import { useGlobal } from '../../store'
 import { BrandLockup } from '../../ui/Brand'
+import { AuthSourceLink } from './AuthSourceLink'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { LangToggle } from '../../ui/LangToggle'
@@ -44,6 +45,7 @@ export function AuthPage() {
   const regClosed = config.data?.registration_mode === 'closed'
   const regInvite = config.data?.registration_mode === 'invite'
   const siteName = (config.data?.site_name || 'imgli').trim() || 'imgli'
+  const sourceUrl = (config.data?.source_url || '').trim()
   const registerNotice = pickLocale(config.data?.register_notice, lang)
   // 浅场景文案：?from=picgo|blog|private 或 utm_campaign（非多触点 funnel）
   const scenarioCopy = (() => {
@@ -276,6 +278,7 @@ export function AuthPage() {
             )}
           </form>
         </div>
+        <AuthSourceLink url={sourceUrl} />
       </main>
     </div>
   )

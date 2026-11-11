@@ -234,3 +234,25 @@ it('开放模式：注册表单无邀请码框', async () => {
   await user.click(await screen.findByRole('button', { name: '注册' }))
   expect(screen.queryByLabelText('邀请码')).not.toBeInTheDocument()
 })
+
+it('登录页页脚不显示上游产品署名，并提供 AGPL 源码入口', async () => {
+  vi.stubGlobal('fetch', vi.fn((url: RequestInfo | URL) => {
+    const u = String(url)
+    if (u.endsWith('/config'))
+      return Promise.resolve(jsonRes({ status: true, message: 'ok', data: {
+        site_name: 'HKSimg',
+        registration_mode: 'open',
+        guest_upload_enabled: false,
+        guest: null,
+        source_url: 'https://github.com/haikesong/imgHK',
+      } }))
+    return Promise.resolve(jsonRes({ status: false, message: '', data: { code: 'not_found' } }, 404))
+  }))
+  renderPage()
+  expect(await screen.findByText(/© \d{4} HKSimg/)).toBeInTheDocument()
+  expect(screen.queryByText(/开源项目 imgli/)).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '源码' })).toHaveAttribute(
+    'href',
+    'https://github.com/haikesong/imgHK',
+  )
+})

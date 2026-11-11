@@ -33,7 +33,7 @@ Keep this table up to date. One row per user-visible change.
 
 | Date | Commit | Change |
 |---|---|---|
-| — | — | 初始 fork，尚未修改 |
+| 2026-11-10 | [`e0f7f17`](https://github.com/haikesong/imgHK/commit/e0f7f171f5c4e78c5e1ce96a2c239414957590c2) | 登录/注册与邮件流页脚移除上游产品署名，改为站点名 + AGPL 源码链接（`source_url`）。 |
 
 ## Build / 构建
 
@@ -60,7 +60,10 @@ git rebase upstream/main
 
 ## Rules for this fork / 本仓库的约束
 
-1. Do not remove or weaken the AGPL license, copyright notices or attribution.
+1. Do not remove or weaken the AGPL license, copyright notices or the source
+   offer. Upstream product branding may be changed, but the AGPL source link
+   must stay prominent (that link is the licence obligation; the product name
+   is not).
 2. Do not add secrets, tokens, `.env` files or server addresses.
 3. Keep the public source in sync with what is deployed. If you deploy a tag,
    push that tag here; if you deploy a commit, push that commit.

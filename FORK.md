@@ -60,6 +60,14 @@ Keep this table up to date. One row per user-visible change.
 `make build-vips` 后传一张 >1 亿像素的 PNG，确认 `/t/{key}` 有缩略图、
 `/i/{key}` 与原文件字节一致（或只少了元数据段）。
 
+2026-11-16 在 2 CPU / 2GB 容器里实测（`VIPS_CONCURRENCY=1`）：
+
+| 输入 | 结果 |
+|---|---|
+| 113.9MB PNG（首次上传，含缩略图） | 7.8s，落盘字节不变，`/i` sha256 与源文件一致，`/t` 399×399 WebP |
+| 8MB / 166MP（10500×15886）PNG | 4.6s，`/t` 263×399 WebP（旧上限 16MP 时这里是 `NOT FOUND`） |
+| 同字节再次上传 | 秒传命中（`instant=true`） |
+
 ## Build / 构建
 
 ```bash
@@ -67,6 +75,18 @@ docker build -t imgli-fork:local .
 ```
 
 The `fork-image` workflow also publishes `ghcr.io/haikesong/imghk:<tag>`.
+
+**Windows 工作区构建要注意 CRLF。** 本机 checkout 的 `docker-entrypoint.sh` 可能是 CRLF，
+`COPY` 进镜像后容器启动直接报
+`exec /usr/local/bin/docker-entrypoint.sh: no such file or directory`（其实是 shebang 带了 `\r`）。
+构建前先转回 LF：
+
+```bash
+sed -i 's/\r$//' docker-entrypoint.sh   # 或在 WSL/Git Bash 里 git checkout-index -f -- docker-entrypoint.sh
+docker build -t imgli-fork:local .
+```
+
+仓库里提交的 blob 本身是 LF，CI（Linux）不受影响；只有从 CRLF 工作区本地构建才会踩到。
 
 ## Deploy / 部署
 

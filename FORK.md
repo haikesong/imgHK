@@ -35,6 +35,30 @@ Keep this table up to date. One row per user-visible change.
 |---|---|---|
 | 2026-11-10 | [`e0f7f17`](https://github.com/haikesong/imgHK/commit/e0f7f171f5c4e78c5e1ce96a2c239414957590c2) | 登录/注册与邮件流页脚移除上游产品署名，改为站点名 + AGPL 源码链接（`source_url`）。 |
 | 2026-11-10 | [`93946c6`](https://github.com/haikesong/imgHK/commit/93946c6) | 登录失败按账号/IP 双维度退避锁定（账号 5 次/15 分钟、IP 30 次/10 分钟），429 带 `Retry-After`；未知账号同样计数，避免枚举。 |
+| 2026-11-16 | [`62aa89f`](https://github.com/haikesong/imgHK/commit/62aa89f) | 大图上传：元数据剥离改容器级无损重写；vips 缩略图上限放宽到 256MiB / 4 亿像素；非 JSON 网关错误给出具体文案。 |
+
+## Large uploads / 大图上传
+
+线上 `img.hks.hk` 在 Cloudflare 橙云后面：**请求体 ≤ 100MB，源站响应 ≤ 100 秒**。
+2026-11-16 的一次 95.6MB / 10500×15886 PNG 上传暴露了两个问题，修改如下：
+
+- **`strip_exif`（默认开）不再整图重编码**。旧实现走 `image.Decode` + 重编码，
+  1.6 亿像素要跑数分钟，先撞 Cloudflare 的 100 秒超时（浏览器只看到「响应格式错误」），
+  服务端却已保存成功。现在走 `internal/imaging/strip.go` 的容器级无损重写：
+  JPEG 丢 APP1/APP12/APP13/COM，PNG 丢 eXIf/tEXt/zTXt/iTXt/tIME，像素流逐字节保留，
+  ICC/Adobe/色彩块不动。无元数据的图字节完全不变。
+- **缩略图上限按构建后端分档**（`internal/imaging/limits_*.go`）：
+  libvips 构建 256MiB / 4 亿像素（`vips_thumbnail_*` 流式解码），纯 Go 构建
+  仍是 24MiB / 1600 万像素。可用 `IMGLI_THUMB_MAX_BYTES` / `IMGLI_THUMB_MAX_PIXELS` 覆盖。
+  超过上限时 `/t/{key}` 返回灰色 `NOT FOUND` 占位 SVG（原图 `/i/{key}` 不受影响）。
+- **缩放/水印/转 WebP** 仍需解码：超过 `upload.MaxProcessPixels`（1 亿像素）时整链
+  跳过并记 `slog.Warn`，保留原字节，避免 OOM 与 100 秒超时。
+- **前端**把 413/524/502 等非 JSON 响应翻译成具体原因（`web/src/upload/uploader.ts`），
+  不再统一显示「响应格式错误」。
+
+验证方式：`go test ./internal/imaging/... ./internal/service/upload/...`；
+`make build-vips` 后传一张 >1 亿像素的 PNG，确认 `/t/{key}` 有缩略图、
+`/i/{key}` 与原文件字节一致（或只少了元数据段）。
 
 ## Build / 构建
 

@@ -1,5 +1,6 @@
 import { ApiError } from '../api/client'
 import type { UploadResult } from '../api/types'
+import { t } from '../i18n'
 import type { QueueOpts } from './queue'
 import { uploadFile, uploadFromURL } from './uploader'
 
@@ -179,6 +180,23 @@ it('响应非 JSON 时归一为 internal_error', async () => {
   xhr.responseText = '<html>Bad Gateway</html>'
   xhr.onload?.()
   await expect(h.promise).rejects.toMatchObject({ code: 'internal_error', httpStatus: 502 })
+})
+
+it('524/413 给出可操作的网关错误文案，而不是「响应格式错误」', async () => {
+  for (const [status, key] of [
+    [524, 'errGatewayTimeout'],
+    [413, 'errGatewayTooLarge'],
+  ] as const) {
+    const h = uploadFile(makeFile(), OPTS_PUBLIC, vi.fn())
+    const xhr = FakeXHR.last!
+    xhr.status = status
+    xhr.responseText = '<html>cloudflare error</html>'
+    xhr.onload?.()
+    const err = (await h.promise.catch((e) => e)) as ApiError
+    expect(err.httpStatus).toBe(status)
+    expect(err.message).toBe(t(`upload.${key}`))
+    expect(err.message).not.toBe(t('upload.errResponseFormat'))
+  }
 })
 
 it('lengthComputable=false 的进度事件不回调', () => {

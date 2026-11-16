@@ -14,6 +14,20 @@ interface Envelope {
   data: unknown
 }
 
+/**
+ * 响应不是 JSON 时说明请求没走到应用：多半是 Cloudflare/Caddy 的 HTML 错误页。
+ * 413 = 请求体超过边缘上限；524/522/504 = 源站处理超过 Cloudflare 100 秒。
+ * 把这些状态翻译成人能看懂的原因，而不是笼统的「响应格式错误」。
+ */
+function gatewayMessage(status: number): string {
+  if (status === 413) return t('upload.errGatewayTooLarge')
+  if (status === 524 || status === 522 || status === 504) return t('upload.errGatewayTimeout')
+  if (status === 502 || status === 520 || status === 521 || status === 523) {
+    return t('upload.errGatewayUnavailable')
+  }
+  return t('upload.errResponseFormat')
+}
+
 /** XHR 上传（fetch 无上传进度事件）。信封语义与 api/client 一致。 */
 export function uploadFile(
   file: File,
@@ -31,7 +45,7 @@ export function uploadFile(
       try {
         env = JSON.parse(xhr.responseText) as Envelope
       } catch {
-        reject(new ApiError(xhr.status, 'internal_error', t('upload.errResponseFormat')))
+        reject(new ApiError(xhr.status, 'internal_error', gatewayMessage(xhr.status)))
         return
       }
       if (xhr.status >= 200 && xhr.status < 300 && env.status) {

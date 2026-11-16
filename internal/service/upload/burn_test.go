@@ -113,6 +113,28 @@ func TestBurnNoopKeepsBytes(t *testing.T) {
 	}
 }
 
+// 默认 strip_exif=true，但干净 PNG 没有可丢的元数据：应原样落盘，不做整图重编码。
+// 这是大图上传不再超时的关键（旧实现会把每张 jpg/png 解码重编码）。
+func TestBurnStripExifWithoutMetadataKeepsBytes(t *testing.T) {
+	svc, u, _ := setup(t)
+	dir := t.TempDir()
+	src := pngFile(t, dir, 40, 30)
+	wantHash := sha256File(t, src)
+	tmp := filepath.Join(dir, "clean.png")
+	copyFile(t, src, tmp)
+
+	res, err := svc.Save(context.Background(), tmp, "clean.png", u, Opts{}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := sha256Bytes(readStored(t, svc, res)); got != wantHash {
+		t.Errorf("无元数据时不应重编码: stored=%s want=%s", got, wantHash)
+	}
+	if res.File.Hash != wantHash {
+		t.Errorf("file.Hash=%s want %s", res.File.Hash, wantHash)
+	}
+}
+
 func TestBurnStripExifChangesJPEGWithAPP1(t *testing.T) {
 	svc, u, _ := setup(t)
 	// default strip on

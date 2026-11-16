@@ -15,10 +15,15 @@ func clampJPEGQuality(q int) int {
 	return q
 }
 
-// StripMetadata 解码后按原格式重编码，去掉 JPEG EXIF/GPS 等附属元数据（及 PNG 文本块等）。
-// 仅 jpeg/png；其它格式返回 ErrUnsupported。无元数据的干净图也可能因重编码改变字节。
-// jpegQuality: 0 或非法时按 90。
+// StripMetadata 去掉 JPEG EXIF/GPS 等附属元数据（及 PNG 文本块等），仅 jpeg/png。
+//
+// 先走容器级无损剥离（StripMetadataLossless）：像素流逐字节保留，1 亿像素的大图
+// 也不用解码/重编码。只有容器解析失败时才退回解码+重编码的旧路径。
+// 无元数据的干净图原样返回（字节不变）。
 func StripMetadata(data []byte, jpegQuality int) ([]byte, error) {
+	if out, _, err := StripMetadataLossless(data); err == nil {
+		return out, nil
+	}
 	img, format, err := decodeJP(data)
 	if err != nil {
 		return nil, err

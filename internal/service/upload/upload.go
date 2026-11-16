@@ -19,6 +19,12 @@ const ThumbMaxEdge = 400
 // MaxDimension 单边像素上限，防解压炸弹。HEIF 在 DecodeHEIFToJPEG 前用 header 检查。测试可下调。
 var MaxDimension = 30000
 
+// MaxProcessPixels 解码型处理链（缩放/水印/转 WebP/旧式重编码剥元数据）的像素上限。
+// 纯 Go 解码 1 亿像素约占数百 MB 内存、耗时几十秒；容器的 2g 内存与 Cloudflare
+// 100 秒源站超时都扛不住。超过上限时跳过处理、保留原字节，仅记 warn。
+// 元数据剥离另有容器级无损路径（imaging.StripMetadataLossless），不受此限制。
+var MaxProcessPixels int64 = 100_000_000
+
 var (
 	ErrExtNotAllowed     = errors.New("upload: 文件类型不被允许")
 	ErrFileTooLarge      = errors.New("upload: 文件超过大小上限")

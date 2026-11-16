@@ -30,11 +30,11 @@ var ErrUnsupported = errors.New("imaging: unsupported image format")
 var ErrTooLarge = errors.New("imaging: image too large for safe decode")
 
 // 缩略图解码安全上限（可被环境变量覆盖，见 init）。
-// 16MP ≈ RGBA 64MiB 峰值量级；再叠并发会顶穿小机 MemoryHigh。
-// 压缩体 24MiB：生产库内有 17–25MiB 原图，仍允许常见截图，拒绝巨型 GIF/PNG 炸弹。
+// 默认值按构建后端分档：纯 Go 保守（16MP/24MiB），libvips 走流式解码
+// （见 limits_go.go / limits_vips.go）。环境变量仍是运维的最终覆盖口。
 var (
-	MaxThumbSourceBytes = 24 << 20 // 24 MiB
-	MaxDecodePixels     = 16_000_000
+	MaxThumbSourceBytes = defaultThumbMaxBytes
+	MaxDecodePixels     = defaultThumbMaxPixels
 )
 
 // thumbSlots 限制并发全图解码/缩放，避免管理端列表批量 /t 击穿内存。
@@ -42,7 +42,7 @@ var thumbSlots chan struct{}
 
 func init() {
 	if v := os.Getenv("IMGLI_THUMB_MAX_PIXELS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n >= 1_000_000 && n <= 100_000_000 {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1_000_000 && n <= 1_000_000_000 {
 			MaxDecodePixels = n
 		}
 	}

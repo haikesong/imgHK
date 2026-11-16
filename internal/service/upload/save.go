@@ -130,7 +130,7 @@ func (s *Service) Save(ctx context.Context, tmpPath, filename string, u *model.U
 
 	// D-② 处理管线:单次解码→缩放/水印→末次编码(keep|webp),hash 之前烧录(与秒传去重兼容)。
 	// 仅 jpg/jpeg/png;gif/webp 不转;无处理项生效时字节完全不动。
-	if changed, perr := s.burn(tmpPath, meta.Ext, u); perr != nil {
+	if changed, perr := s.burn(tmpPath, meta, u); perr != nil {
 		return nil, perr
 	} else if changed {
 		if meta, err = s.probe(tmpPath); err != nil { // 尺寸可能已变,重探

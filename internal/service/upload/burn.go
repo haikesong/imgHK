@@ -18,8 +18,11 @@ import (
 // 仅 jpg/jpeg/png；gif/webp 等原样跳过（含 output_format=webp 时亦不转）。
 // settings 仅「键不存在」按默认降级,其余读取错误上抛中止。
 // 处理链 ErrUnsupported → 整链放弃、原字节不动、记 slog.Warn。
-func (s *Service) burn(tmpPath, ext string, u *model.User) (bool, error) {
-	switch strings.ToLower(ext) {
+//
+// 只开 strip_exif 时走容器级无损剥离（不解码像素），大图也不会因重编码超时；
+// 需要缩放/水印/转 WebP 时仍走解码管线，并对超过 MaxProcessPixels 的图整链跳过。
+func (s *Service) burn(tmpPath string, meta imaging.Meta, u *model.User) (bool, error) {
+	switch strings.ToLower(meta.Ext) {
 	case "jpg", "jpeg", "png":
 	default:
 		return false, nil
@@ -66,6 +69,32 @@ func (s *Service) burn(tmpPath, ext string, u *model.User) (bool, error) {
 	data, err := os.ReadFile(tmpPath)
 	if err != nil {
 		return false, err
+	}
+
+	// 只开 strip_exif：容器级无损剥离，像素流逐字节保留。
+	// 旧的「解码→重编码」路径在 1 亿像素级 PNG 上要跑数分钟，会先撞上
+	// Cloudflare 100 秒源站超时（用户看到 524 + 「响应格式错误」）。
+	if proc.MaxEdge == 0 && !textOn && markData == nil && !wantWebP {
+		out, changed, serr := imaging.StripMetadataLossless(data)
+		if serr == nil {
+			if !changed {
+				return false, nil
+			}
+			if err := os.WriteFile(tmpPath, out, 0o600); err != nil {
+				return false, err
+			}
+			return true, nil
+		}
+		// 容器解析失败：退回下面的重编码路径（仍会去掉元数据）。
+		slog.Warn("容器级元数据剥离失败，退回重编码", "err", serr)
+	}
+
+	// 解码型处理链的内存峰值和时间随像素数线性增长。超大图整链跳过，
+	// 原字节保留：宁可少做缩放/水印，也不要 OOM 或让上传超时。
+	if px := int64(meta.Width) * int64(meta.Height); px > MaxProcessPixels {
+		slog.Warn("图片处理跳过：像素超过上限",
+			"width", meta.Width, "height", meta.Height, "pixels", px, "limit", MaxProcessPixels)
+		return false, nil
 	}
 
 	res, err := imaging.ProcessPipeline(data, imaging.PipelineOpts{

@@ -150,6 +150,13 @@ cd web && npx vitest run src/upload                            # 3 路并发/续
 - **断言 promise 之前先挂 `.catch(e => e)`**：预期失败的用例如果先 flush 微任务再断言，
   vitest 会把中间态当成 unhandled rejection 打警告，看起来像用例挂了。
 
+**本地端到端**：`scripts/e2e-chunked-upload.sh <镜像> <文件...>`（Linux / WSL，
+需要 docker、curl、python3）。脚本会注册测试用户、把 1 号用户组放宽到 256MiB、
+先只传 2 片并查续传状态、其余分片乱序 3 路并发、`complete`、直链逐字节 `cmp`、
+核对缩略图与会话目录清理；小于 32MiB 的文件自动走单请求路径做回归。
+数据目录默认 `/var/tmp`（WSL 的 `/tmp` 只有 2GiB），可用 `DATA=` 覆盖。
+先 `docker build -t imghk:e2e .`，构建前确认 `docker-entrypoint.sh` 是 LF（见下方构建坑）。
+
 2026-11-16 本地镜像实测（2 CPU / 2GB，`VIPS_CONCURRENCY=1`，loopback）：
 
 | 输入 | 分片数 | `complete` 耗时 | 端到端（切片+传输+complete+逐字节校验） |

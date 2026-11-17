@@ -36,6 +36,7 @@ Keep this table up to date. One row per user-visible change.
 | 2026-11-10 | [`e0f7f17`](https://github.com/haikesong/imgHK/commit/e0f7f171f5c4e78c5e1ce96a2c239414957590c2) | 登录/注册与邮件流页脚移除上游产品署名，改为站点名 + AGPL 源码链接（`source_url`）。 |
 | 2026-11-10 | [`93946c6`](https://github.com/haikesong/imgHK/commit/93946c6) | 登录失败按账号/IP 双维度退避锁定（账号 5 次/15 分钟、IP 30 次/10 分钟），429 带 `Retry-After`；未知账号同样计数，避免枚举。 |
 | 2026-11-16 | [`62aa89f`](https://github.com/haikesong/imgHK/commit/62aa89f) | 大图上传：元数据剥离改容器级无损重写；vips 缩略图上限放宽到 256MiB / 4 亿像素；非 JSON 网关错误给出具体文案。 |
+| 2026-11-16 | [`da1dfcb`](https://github.com/haikesong/imgHK/commit/da1dfcb) | 大文件分片上传：Web 端 ≥32MiB 走会话 + 8MiB/片 × 3 路并发 + 断点续传，绕开 Cloudflare 约 100 秒的源站读取超时；小文件仍走单请求。 |
 
 ## Large uploads / 大图上传
 

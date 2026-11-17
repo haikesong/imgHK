@@ -68,6 +68,87 @@ Keep this table up to date. One row per user-visible change.
 | 8MB / 166MP（10500×15886）PNG | 4.6s，`/t` 263×399 WebP（旧上限 16MP 时这里是 `NOT FOUND`） |
 | 同字节再次上传 | 秒传命中（`instant=true`） |
 
+## Chunked uploads / 分片上传（大文件会话 + 断点续传）
+
+单请求上传受 Cloudflare **100 秒源站读取超时**限制：上行 1MB/s 时，100MB 文件
+光传输就要 100 秒，浏览器大概率只等到 `524`，即使源站最终保存成功。分片把一次
+长传输拆成若干 8MiB 的短请求，每片都远在 100 秒内完成。
+
+**客户端触发条件**（`web/src/upload/uploader.ts`）：
+
+| 常量 | 值 | 说明 |
+|---|---|---|
+| `CHUNK_THRESHOLD` | 32MiB | 小于此值仍走原来的 `POST /api/v1/upload`，行为不变 |
+| `CHUNK_SIZE` | 8MiB | 以服务端 `chunk_size` 返回值为准 |
+| `CHUNK_CONCURRENCY` | 3 | 单文件最多 3 片同时在途，任意顺序完成 |
+
+**API**（全部在 `/api/v1` 下，鉴权与单请求上传一致：session 或 Bearer，游客按 IP）：
+
+| 方法 | 路径 | 作用 |
+|---|---|---|
+| POST | `/upload/session` | 创建会话：`{name,size,visibility,album_id,policy_id,expires_in,max_views}` → `{session_id,chunk_size,chunks_total,expires_at}` |
+| PUT | `/upload/session/{id}/{index}` | 上传第 `index` 片（原始字节，`0..chunks_total-1`），返回已收字节与缺失片数 |
+| GET | `/upload/session/{id}` | 断点续传状态：`{received,missing,received_bytes,state}` |
+| POST | `/upload/session/{id}/complete` | 拼装并落库，返回与单请求上传相同的 `UploadResult` |
+| DELETE | `/upload/session/{id}` | 取消并删除临时分片 |
+
+**服务端实现**（`internal/handler/upload_session.go`）：
+
+- 会话目录 `<data_dir>/.upload-sessions/<id>/`：`meta.json` + `parts/<index>`。
+  分片先写临时文件再原子 rename，因此**任意顺序、重复上传同一片**都安全（幂等覆盖）。
+- 分片大小严格校验（最后一片除外）：大小不符返回 400 且不计入已收分片。
+  单片请求体硬上限 16MiB，会话总大小仍受 `maxUploadBytes`（256MiB）与用户组限制约束。
+- `complete` 等所有在途分片写完，按 index 顺序拼装成会话目录里的临时文件，再调用
+  原有的 `upload.Service.Save`——去重（SHA-256）、元数据剥离、缩略图、配额、
+  用户组限制、相册/策略/有效期与单请求路径**完全一致**。
+- 创建会话时先做预检（`CheckSizeAllowed`：游客开关、组上限、配额、本月流量），
+  避免用户白传几十 MB。
+- 会话 TTL 2 小时；启动时与每 10 分钟扫描清理；同一用户/游客 IP 最多 4 个未完成会话。
+- 限速：`POST /upload/session` 与 `complete` 计入用户组限速；**分片 PUT / GET / DELETE
+  不计**——一个 100MB 文件是十余个请求，按每分钟额度会把正常上传打成 429。
+  分片请求仍受鉴权、会话属主、单片大小与总大小约束。
+- 会话属主：登录用户按 `user_id`，游客按 IP；跨用户/跨 IP 访问返回 403。
+
+**断点续传**：
+
+- 前端把 `file.name + size + lastModified` → `session_id` 记在 `localStorage`
+  （`imgli:upload-session:*`，2 小时过期）。网络中断后点重试，先 `GET` 会话状态，
+  只补 `missing` 里的分片。
+- `complete` 返回 409 `upload_incomplete`（分片在服务端被判缺失/正在合并）时，
+  客户端查一次状态：`state=completing` 就等 3 秒再合并（另一轮 complete 还在跑），
+  否则补传 `missing` 后再合并一次。会话已被消费（404）时清掉续传记录、按可重试
+  失败上报，下次重试新建会话（落库仍有 SHA-256 秒传兜底）。
+- 用户删除上传卡片（abort）时：先中止在途 XHR，再 `DELETE` 会话并清掉续传记录。
+- 网络错误/限速：**保留**会话与续传记录，卡片可重试；校验类错误（类型/配额/
+  文件名不合法）删除会话，重试也不会成功。
+- 注意：`complete` 仍在请求内完成 `Save`。若超大图的缩略图生成超过 Cloudflare
+  100 秒，浏览器仍可能收到 524；这次重试会重建会话并重传，但 `Save` 的 SHA-256
+  秒传会命中已落盘对象，不会产生第二份存储。
+
+**验证**：
+
+```bash
+go test ./internal/handler/ -run TestUploadSession -count=1   # 乱序/重传/越权/清理
+go test ./internal/service/upload/ -run TestCheckSizeAllowed -count=1
+cd web && npx vitest run src/upload                            # 3 路并发/续传/取消
+```
+
+`_test.go` 里通过 `UploadSessionStore.chunkSize`（包内字段）把分片调小，用一张
+几百字节的 PNG 覆盖多分片路径，不需要真的传大文件。
+
+2026-11-16 本地镜像实测（2 CPU / 2GB，`VIPS_CONCURRENCY=1`，loopback）：
+
+| 输入 | 分片数 | `complete` 耗时 | 端到端（切片+传输+complete+逐字节校验） |
+|---|---|---|---|
+| 113.9MB PNG（10500×15886） | 14 | 6.7s | 48s |
+| 250MB PNG（640×480 + 私有 ancillary chunk 填充） | 30 | 30.8s | 120s |
+
+两次 `/i` 下载都与源文件逐字节一致、`/t` 200、会话目录清理正常。端到端时间包含
+在 `/mnt/d`（9p）上切片与 100–250MB 的本地校验 IO；真实瓶颈是每片 8MiB 的 PUT：
+慢上行（0.6–1MB/s）下单片 8–13 秒，仍远低于 Cloudflare 的 100 秒。
+`complete` 里是 SHA-256、容器级元数据重写与落盘，250MB 也要 30 秒左右——
+真实超大图若在 `complete` 阶段撞上 100 秒，按上面的重试语义处理。
+
 ## Build / 构建
 
 ```bash

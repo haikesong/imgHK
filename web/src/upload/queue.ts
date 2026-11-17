@@ -43,7 +43,13 @@ export const CONCURRENCY = 3
 
 /** 失败码 → 是否可重试（不可重试 = 重试也必败）。 */
 export function retryableCode(code: string): boolean {
-  return code === 'network_error' || code === 'rate_limited' || code === 'internal_error'
+  return (
+    code === 'network_error' ||
+    code === 'rate_limited' ||
+    code === 'internal_error' ||
+    // 分片会话缺片/正在合并：服务端保留会话，重试只补缺失分片
+    code === 'upload_incomplete'
+  )
 }
 
 export function extLabel(allowedExts: string[] | null | undefined): string {

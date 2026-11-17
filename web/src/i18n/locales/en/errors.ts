@@ -10,6 +10,7 @@ export default {
   quota_exceeded: 'Storage quota exceeded',
   bandwidth_exceeded: 'Monthly bandwidth quota exceeded',
   file_too_large: 'File exceeds the size limit',
+  upload_incomplete: 'Upload incomplete, please retry (uploaded chunks are kept)',
 
   ext_not_allowed: 'File type not allowed',
   moderation_rejected: 'Image rejected by moderation',

@@ -26,6 +26,8 @@ const (
 	CodeMaxViewsOverGroup = "max_views_over_group"
 	// 魔数已认出 HEIF，但本构建没有可用解码器（纯 Go / 无 libheif）。
 	CodeHeicUnsupported = "heic_unsupported"
+	// 分片上传会话还缺分片或正在合并：客户端应查询会话状态后补传/重试 complete。
+	CodeUploadIncomplete = "upload_incomplete"
 )
 
 // MaxExpiresInSec 有效期上限(1 年):既作业务上限(过期用于临时分享无需多年),又防

@@ -62,6 +62,7 @@ type Server struct {
 	storageRes *storagesvc.Resolver // mountAPI/mountServe 共享，单 driver 缓存
 	authRes    authResolver         // API 与 /i /t 共用会话/Token 解析
 	imgProc    imaging.Processor
+	sessions   *handler.UploadSessionStore // 分片上传会话（nil=禁用）
 }
 
 func New(opts Options) *Server {
@@ -154,6 +155,12 @@ func (s *Server) mountAPI() {
 	}
 	hooks := webhook.New(s.opts.DB)
 	fetchAllow := parseFetchAllow(s.opts.Cfg.FetchAllow)
+	// 分片上传会话目录：<data_dir>/.upload-sessions（与 uploads/avatars 同级，不在对外路径下）。
+	sessionStore, serr := handler.NewUploadSessionStore(filepath.Join(s.opts.Cfg.DataDir, ".upload-sessions"))
+	if serr != nil {
+		slog.Warn("分片上传会话目录不可用，已禁用分片上传", "err", serr)
+	}
+	s.sessions = sessionStore
 	uploadH := &handler.UploadHandlers{D: handler.UploadDeps{
 		Svc:         upSvc,
 		Res:         storageRes,
@@ -161,6 +168,7 @@ func (s *Server) mountAPI() {
 		FetchAllow:  fetchAllow,
 		FetchClient: handler.NewFetchClient(fetchAllow),
 		Hooks:       hooks,
+		Sessions:    sessionStore,
 	}}
 
 	// 图片管理（Task 1+）
@@ -331,6 +339,15 @@ func (s *Server) mountAPI() {
 			up.Use(handler.RequireUserOrAnon)
 			up.With(limiter.GroupMiddleware(s.opts.DB)).Post("/upload", uploadH.Upload)
 			up.With(limiter.GroupMiddleware(s.opts.DB)).Post("/upload/url", uploadH.UploadURL)
+
+			// 分片上传（大文件）：会话创建与合并计入组限速；分片 PUT 与状态查询
+			// 不计入——一个 100MB 文件是十余个分片请求，用 group 的每分钟额度会把
+			// 正常上传打成 429（分片仍受会话大小、单请求 16MiB 与鉴权约束）。
+			up.With(limiter.GroupMiddleware(s.opts.DB)).Post("/upload/session", uploadH.CreateUploadSession)
+			up.With(limiter.GroupMiddleware(s.opts.DB)).Post("/upload/session/{id}/complete", uploadH.CompleteUploadSession)
+			up.Put("/upload/session/{id}/{index}", uploadH.PutUploadChunk)
+			up.Get("/upload/session/{id}", uploadH.GetUploadSession)
+			up.Delete("/upload/session/{id}", uploadH.CancelUploadSession)
 		})
 	})
 }
@@ -404,6 +421,9 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	if s.stats != nil {
 		go s.stats.Start(ctx)
+	}
+	if s.sessions != nil {
+		go s.sessions.StartSweeper(ctx)
 	}
 	if s.imgSvc != nil {
 		go func() {

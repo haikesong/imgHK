@@ -10,6 +10,7 @@ export default {
   quota_exceeded: '存储配额已用尽',
   bandwidth_exceeded: '本月流量已用尽',
   file_too_large: '文件超过大小限制',
+  upload_incomplete: '上传尚未完成，请重试（已传分片会保留）',
 
   ext_not_allowed: '不支持的文件类型',
   moderation_rejected: '图片未通过内容审核',

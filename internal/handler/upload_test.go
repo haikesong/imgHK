@@ -126,12 +126,27 @@ func setupUploadHandler(t *testing.T) (*gorm.DB, *UploadHandlers, *model.User, *
 	}
 	h := &UploadHandlers{D: UploadDeps{
 		Svc: svc, Res: res, MaxBytes: 10 << 20, FetchClient: NewFetchClient(nil),
+		Sessions: mustSessionStore(t),
 	}}
 	mux := chi.NewRouter()
 	mux.With(withPrincipal(u)).Post("/api/v1/upload", h.Upload)
 	mux.Post("/api/v1/upload/anon", h.Upload)
 	mux.With(withPrincipal(u)).Post("/api/v1/upload/url", h.UploadURL)
+	mux.With(withPrincipal(u)).Post("/api/v1/upload/session", h.CreateUploadSession)
+	mux.With(withPrincipal(u)).Post("/api/v1/upload/session/{id}/complete", h.CompleteUploadSession)
+	mux.With(withPrincipal(u)).Put("/api/v1/upload/session/{id}/{index}", h.PutUploadChunk)
+	mux.With(withPrincipal(u)).Get("/api/v1/upload/session/{id}", h.GetUploadSession)
+	mux.With(withPrincipal(u)).Delete("/api/v1/upload/session/{id}", h.CancelUploadSession)
 	return db, h, u, mux
+}
+
+func mustSessionStore(t *testing.T) *UploadSessionStore {
+	t.Helper()
+	st, err := NewUploadSessionStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return st
 }
 
 func multipartUploadBody(t *testing.T, filename string, data []byte, fields map[string]string) (*bytes.Buffer, string) {

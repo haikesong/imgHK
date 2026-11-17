@@ -27,7 +27,9 @@ type UploadDeps struct {
 	MaxBytes    int64        // 硬上限（防超大 body），实际按用户组上限精确拦截
 	FetchAllow  []*net.IPNet // URL 抓取运维内网允许清单（默认空=严格）
 	FetchClient *http.Client // 抓取远程图片专用客户端（拨号期 SSRF 校验，按 FetchAllow 构造）
-	Hooks       interface {
+	// Sessions 为大文件分片上传提供会话存储；nil 表示不启用（路由会返回 501）。
+	Sessions *UploadSessionStore
+	Hooks    interface {
 		Emit(eventType string, data map[string]any)
 	}
 }

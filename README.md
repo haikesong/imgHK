@@ -245,7 +245,11 @@ cat shot.png | imgli upload -name shot.png -
 ```
 
 Flags: `-base-url`, `-token`, `-format url|markdown|json`, `-visibility`,
-`-expires-in`, `-verbose`, `-name` (stdin filename). Group policy:
+`-expires-in`, `-chunked auto|always|never`, `-verbose`, `-name` (stdin
+filename). `-chunked auto` switches files ≥32MiB to the session API; interrupted
+chunked uploads resume from the user cache on the next run while the server
+session is still alive (2-hour TTL) (see
+[docs/integrations/README.md](docs/integrations/README.md)). Group policy:
 [docs/user-groups-lifecycle.md](docs/user-groups-lifecycle.md).
 
 ### Doctor (self-host checks)

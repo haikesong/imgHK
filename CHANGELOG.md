@@ -10,6 +10,10 @@ separate version in `go.mod` or `web/package.json`.
 
 ## [Unreleased]
 
+### Added
+
+- **CLI chunked upload:** `imgli upload` and `imgli import-dir` accept `-chunked auto|always|never`. `auto` uses the session API for files ≥32MiB and falls back to a single request when the server does not expose the session routes (`always` fails instead). `create` retries only a 429 with `Retry-After` or a 5xx response (transport errors are not retried because create is not idempotent); `complete` / `status` / chunk `PUT` retry 429/5xx a bounded number of times, and a `PUT` hitting `409 upload_incomplete` retries briefly. A `complete` that sees `state=completing` polls instead of deleting the session. Retryable failures keep the session; the CLI persists `session_id` in the user cache so the next run of the same file resumes and uploads only missing chunks. CLI uploads cancel their server session on Ctrl-C.
+
 ## [0.10.0] - 2026-09-05
 
 Theme: **Durable storage migrate**.

@@ -227,7 +227,10 @@ cat shot.png | imgli upload -name shot.png -
 ```
 
 参数：`-base-url`、`-token`、`-format url|markdown|json`、`-visibility`、
-`-expires-in`、`-verbose`、`-name`（stdin 时的文件名）。组策略见
+`-expires-in`、`-chunked auto|always|never`、`-verbose`、`-name`（stdin 时的文件名）。
+`-chunked auto` 对 ≥32MiB 的文件自动走会话式分片；中断后再次上传同一文件，在服务端会话
+仍存活（2 小时 TTL）时会从用户缓存续传（见
+[docs/integrations/README.md](docs/integrations/README.md)）。组策略见
 [docs/user-groups-lifecycle.md](docs/user-groups-lifecycle.md)。
 
 ### doctor（自检）

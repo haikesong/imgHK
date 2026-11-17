@@ -22,7 +22,7 @@ const (
 	FormatJSON     = "json"
 )
 
-// Opts configures a single multipart upload.
+// Opts configures an upload (single multipart or chunked session).
 type Opts struct {
 	BaseURL    string // e.g. https://img.li (no trailing slash required)
 	Token      string // API token; empty for guest upload when enabled
@@ -30,17 +30,31 @@ type Opts struct {
 	Visibility string // optional: public | private
 	ExpiresIn  int    // optional seconds; 0 = omit field
 	Client     *http.Client
+
+	// Chunked 选择分片策略: auto | always | never；空值等同 auto。
+	// auto 仅在文件大小 >= ChunkThreshold（默认 32 MiB）时分片。
+	Chunked string
+	// ChunkThreshold 覆盖 auto 模式阈值；0 = DefaultChunkThreshold。仅测试用。
+	ChunkThreshold int64
+	// Resume 开启跨进程续传：分片上传把 session_id 写到本地缓存，同一文件
+	// 下次上传先 GET 会话状态、只补缺失分片。CLI upload/import-dir 默认开启。
+	Resume bool
+	// ResumeStateDir 覆盖续传状态目录（仅测试用；空 = 用户缓存目录）。
+	ResumeStateDir string
+
+	// resumeStatePath 由 UploadFile 根据文件路径/大小/mtime 计算，仅包内使用。
+	resumeStatePath string
 }
 
 // Result is the successful upload payload (subset of API data).
 type Result struct {
-	Key      string `json:"key"`
-	Name     string `json:"name"`
-	Size     int64  `json:"size"`
-	Instant  bool   `json:"instant"`
-	Links    Links  `json:"links"`
-	Expires  any    `json:"expires_at"`
-	RawJSON  json.RawMessage
+	Key     string `json:"key"`
+	Name    string `json:"name"`
+	Size    int64  `json:"size"`
+	Instant bool   `json:"instant"`
+	Links   Links  `json:"links"`
+	Expires any    `json:"expires_at"`
+	RawJSON json.RawMessage
 }
 
 // Links mirrors API data.links.
@@ -134,20 +148,29 @@ func FormatOutput(format string, res *Result) (string, error) {
 	}
 }
 
+// cleanFilename trims and reduces a filename to its base name.
+func cleanFilename(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return "", fmt.Errorf("文件名不能为空")
+	}
+	// Keep only base name for multipart (avoid path traversal cosmetics).
+	name = filepath.Base(name)
+	if name == "." || name == string(filepath.Separator) {
+		return "", fmt.Errorf("文件名不能为空")
+	}
+	return name, nil
+}
+
 // Upload posts file content as multipart field "file" to /api/v1/upload.
 func Upload(ctx context.Context, opts Opts, content io.Reader) (*Result, error) {
 	base, err := NormalizeBaseURL(opts.BaseURL)
 	if err != nil {
 		return nil, err
 	}
-	name := strings.TrimSpace(opts.Filename)
-	if name == "" {
-		return nil, fmt.Errorf("文件名不能为空")
-	}
-	// Keep only base name for multipart (avoid path traversal cosmetics).
-	name = filepath.Base(name)
-	if name == "." || name == string(filepath.Separator) {
-		return nil, fmt.Errorf("文件名不能为空")
+	name, err := cleanFilename(opts.Filename)
+	if err != nil {
+		return nil, err
 	}
 
 	var body bytes.Buffer

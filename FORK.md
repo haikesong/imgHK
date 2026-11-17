@@ -37,6 +37,7 @@ Keep this table up to date. One row per user-visible change.
 | 2026-11-10 | [`93946c6`](https://github.com/haikesong/imgHK/commit/93946c6) | 登录失败按账号/IP 双维度退避锁定（账号 5 次/15 分钟、IP 30 次/10 分钟），429 带 `Retry-After`；未知账号同样计数，避免枚举。 |
 | 2026-11-16 | [`62aa89f`](https://github.com/haikesong/imgHK/commit/62aa89f) | 大图上传：元数据剥离改容器级无损重写；vips 缩略图上限放宽到 256MiB / 4 亿像素；非 JSON 网关错误给出具体文案。 |
 | 2026-11-16 | [`da1dfcb`](https://github.com/haikesong/imgHK/commit/da1dfcb) | 大文件分片上传：Web 端 ≥32MiB 走会话 + 8MiB/片 × 3 路并发 + 断点续传，绕开 Cloudflare 约 100 秒的源站读取超时；小文件仍走单请求。 |
+| 2026-11-16 | _unreleased_ | CLI 分片上传：`imgli upload` / `imgli import-dir` 新增 `-chunked auto\|always\|never`；`auto` 在文件 ≥32MiB 时走会话 API，服务端不支持会话路由（404/405/501）时回退单请求；`create` 只对带 `Retry-After` 的 429 或 5xx 重试，`complete`/`status`/PUT 对 429/5xx 有界重试，PUT 的 409 `upload_incomplete` 短暂重试；`state=completing` 时有界轮询不删会话；可重试失败把 `session_id` 落到用户缓存，下次同一文件续传只补 missing。 |
 
 ## Large uploads / 大图上传
 
@@ -110,6 +111,24 @@ Keep this table up to date. One row per user-visible change.
   分片请求仍受鉴权、会话属主、单片大小与总大小约束。
 - 会话属主：登录用户按 `user_id`，游客按 IP；跨用户/跨 IP 访问返回 403。
 
+**CLI（`imgli upload` / `imgli import-dir`，`internal/cliupload/`）**：
+
+- `-chunked auto|always|never`，默认 `auto`：文件 ≥32MiB 才走会话，`always` 强制、
+  `never` 关闭；服务端不暴露会话路由（create 返回 404/405/501）时 `auto` 回退单请求，
+  `always` 直接报错（否则会静默退化成仍受 100 秒限制的单请求）。
+- 分片大小以 `POST /upload/session` 返回的 `chunk_size` 为准（服务端当前 8MiB），固定
+  3 路并发 PUT、任意顺序；单片 PUT 超时 2 分钟，`complete` 5 分钟，create/status 30 秒，
+  `imgli upload` 整体限制 30 分钟。
+- `import-dir` 逐文件套用同一策略与续传。stdin（`imgli upload -`）拿不到大小，**始终单请求**；
+  `-chunked always` 与 stdin 组合直接报错。
+- 服务端限制同上：同一用户/游客 IP 最多 4 个未完成会话、TTL 2 小时；`create` 与
+  `complete` 计入组限速，分片 PUT/GET/DELETE 不计。
+- 验证：`go test ./internal/cliupload/... ./cmd/imgli/...` 覆盖并发、重试、续传、
+  回退、清理，以及 stdin 的 `auto`/`never` 单请求与 `always` 拒绝；
+  `scripts/e2e-chunked-upload.sh` 对本地镜像做分片协议的端到端验证（直接走 HTTP，
+  不经过 CLI 包装）。线上仍受 Cloudflare 100MB 请求体与 100 秒源站超时约束，
+  本文不给出 CLI 的线上实测数字。
+
 **断点续传**：
 
 - 前端把 `file.name + size + lastModified` → `session_id` 记在 `localStorage`
@@ -122,6 +141,12 @@ Keep this table up to date. One row per user-visible change.
 - 用户删除上传卡片（abort）时：先中止在途 XHR，再 `DELETE` 会话并清掉续传记录。
 - 网络错误/限速：**保留**会话与续传记录，卡片可重试；校验类错误（类型/配额/
   文件名不合法）删除会话，重试也不会成功。
+- **CLI**（`internal/cliupload/upload_chunked.go`）把 `session_id` 写到用户缓存
+  （`os.UserCacheDir()/imgli/uploads/<hash>.json`，key 为文件绝对路径 + 大小 + mtime）。
+  可重试失败（`complete` 429/5xx、PUT 409 `upload_incomplete`、`status` 可重试错误）
+  保留会话；下次 `upload` / `import-dir` 同一文件先 `GET` 状态，只补 `missing`，
+  成功后删状态文件。不可重试错误 DELETE 会话并清状态。`create` 是非幂等 POST，
+  传输层错误不重试（请求可能已建会话，重试会留孤儿占 4 个未完成会话配额）。
 - 注意：`complete` 仍在请求内完成 `Save`。若超大图的缩略图生成超过 Cloudflare
   100 秒，浏览器仍可能收到 524；这次重试会重建会话并重传，但 `Save` 的 SHA-256
   秒传会命中已落盘对象，不会产生第二份存储。

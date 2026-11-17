@@ -7,8 +7,10 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/yixian-huang/imgli/internal/cliupload"
@@ -28,6 +30,7 @@ func runImportDir(args []string) error {
 	visibility := fsFlag.String("visibility", "public", "public|private")
 	dryRun := fsFlag.Bool("dry-run", false, "只列出将上传的文件")
 	continueOnErr := fsFlag.Bool("continue", true, "单个失败后继续")
+	chunked := fsFlag.String("chunked", "auto", "分片上传: auto | always | never（auto 默认 >=32MiB 分片）")
 	fsFlag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "用法: imgli import-dir [flags] <directory>")
 		fmt.Fprintln(os.Stderr, "  批量上传目录内图片（复用 /api/v1/upload；秒传靠服务端 content-hash）。")
@@ -52,6 +55,12 @@ func runImportDir(args []string) error {
 	vis := strings.TrimSpace(*visibility)
 	if vis != "public" && vis != "private" {
 		return fmt.Errorf("-visibility 须为 public 或 private")
+	}
+	chunkMode := strings.ToLower(strings.TrimSpace(*chunked))
+	switch chunkMode {
+	case "auto", "always", "never":
+	default:
+		return fmt.Errorf("-chunked 须为 auto、always 或 never")
 	}
 
 	var files []string
@@ -91,27 +100,25 @@ func runImportDir(args []string) error {
 	if err != nil {
 		return err
 	}
-	client := &http.Client{Timeout: 120 * time.Second}
-	ctx := context.Background()
+	client := &http.Client{Timeout: 5 * time.Minute}
+	// 接信号：Ctrl-C 让当前上传的 ctx 取消（UploadChunked 会 DELETE 会话），
+	// 并阻止 -continue 默认 true 在取消后继续空跑剩余文件。
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	okN, failN := 0, 0
 	for i, path := range files {
-		f, err := os.Open(path)
-		if err != nil {
-			failN++
-			fmt.Fprintf(os.Stderr, "[%d/%d] FAIL %s: %v\n", i+1, len(files), path, err)
-			if !*continueOnErr {
-				return err
-			}
-			continue
+		if err := ctx.Err(); err != nil {
+			return err
 		}
-		res, uerr := cliupload.Upload(ctx, cliupload.Opts{
+		res, uerr := cliupload.UploadFile(ctx, cliupload.Opts{
 			BaseURL:    base,
 			Token:      *token,
 			Filename:   filepath.Base(path),
 			Visibility: vis,
 			Client:     client,
-		}, f)
-		_ = f.Close()
+			Chunked:    chunkMode,
+			Resume:     true,
+		}, path)
 		if uerr != nil {
 			failN++
 			fmt.Fprintf(os.Stderr, "[%d/%d] FAIL %s: %v\n", i+1, len(files), path, uerr)

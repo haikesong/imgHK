@@ -130,6 +130,7 @@ curl -sS -X POST 'https://img.li/api/v1/upload' \
 |---|---|
 | Token | 泄露即等同账密上传权；可设置页作废重建 |
 | 配额 | 登录用户受用户组容量与限速约束 |
+| 大文件 | PicGo / web-uploader 仍是单请求上传，受橙云 100MB 请求体与 100 秒超时限制；>100MB 请用网页上传或 `imgli` CLI（CLI 对 ≥32MiB 自动分片） |
 | 有效期 / 次数 | 组 `max_expires_in` / `max_max_views` 等会拒绝非法 `expires_in`/`max_views`（见 [user-groups-lifecycle.md](user-groups-lifecycle.md)；客户端无 UI 时查 `GET /user/quota`） |
 | 游客 | 仅适合临时试用，不要给 PicGo 配游客无 Token |
 | 内容安全 | 上传可能进待审；公开直链受机审/词表策略影响 |

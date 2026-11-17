@@ -137,6 +137,19 @@ cd web && npx vitest run src/upload                            # 3 路并发/续
 `_test.go` 里通过 `UploadSessionStore.chunkSize`（包内字段）把分片调小，用一张
 几百字节的 PNG 覆盖多分片路径，不需要真的传大文件。
 
+**前端测试的坑**（`web/src/upload/uploader.chunk.test.ts`）：
+
+- **Node ≥ 22 自带的全局 `localStorage` 在 vitest/jsdom 里是 `undefined`，并且会遮蔽
+  jsdom 的那份实现**，任何访问 `localStorage.getItem` 的用例都会在 setup 阶段炸掉、
+  整个套件跑不起来。`web/src/vitest.setup.ts` 里在 `!globalThis.localStorage` 时补一个
+  内存实现，再加语言设置。以后换 Node 版本或删掉这个文件时先跑一遍
+  `cd web && npx vitest run src/upload` 确认。
+- 浏览器上传用脚本化的 `FakeXHR`（`open` / `setRequestHeader` / `send` 里
+  `queueMicrotask(responder)`，`abort` 打标记），不启真浏览器：这样才能精确控制
+  「3 路并发里哪一片先回、哪一片失败一次再成功、complete 返回 409/404」。
+- **断言 promise 之前先挂 `.catch(e => e)`**：预期失败的用例如果先 flush 微任务再断言，
+  vitest 会把中间态当成 unhandled rejection 打警告，看起来像用例挂了。
+
 2026-11-16 本地镜像实测（2 CPU / 2GB，`VIPS_CONCURRENCY=1`，loopback）：
 
 | 输入 | 分片数 | `complete` 耗时 | 端到端（切片+传输+complete+逐字节校验） |
